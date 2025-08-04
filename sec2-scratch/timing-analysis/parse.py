@@ -1,5 +1,5 @@
-import os
 import re
+import logging as log
 
 """
 Parses timing reports that look like this:
@@ -190,9 +190,7 @@ class TimingParser:
         ```
         """
         data = {}
-        print(f"Parsing entry: {idx} - {idx+3}")
-        print("".join(self.contents[idx : idx + 3]))
-        print("xxxxxxxxxxxxxxxxx")
+        log.info(f"Parsing entry: {idx} - {idx+3}")
 
         # Split the header using spaces, remove the empty elements.
         # Expect there are exactly 3 parts: location, resource, and delay type.
@@ -245,11 +243,13 @@ class TimingParser:
         # Return the parsed data
         return data
 
-    def parse_path(self, start: int, end: int) -> list:
+    def parse_path(self, skip_first: bool, start: int, end: int) -> list:
         """
         Parses the critical path from start to the end index.
+        If `skip_first` is set, we need to skip the first four entries because
+        this file uses FORMAT 2.
         """
-        idx = start
+        idx = start + 4 if skip_first else start
         out = []
         while idx + 3 < end:
             entry = self.parse_critical_path_entry(idx)
@@ -328,6 +328,35 @@ class TimingParser:
     def parse_critical_path(self, start: int, end: int) -> dict:
         """
         Parses a critical path from the report.
+        There are two possible formats:
+
+        FORMAT 1:
+        ```
+        META
+        -------
+        CLOCK
+        -------
+        PATH
+        -------
+        EST
+        -------
+        COMPUTE
+        -------
+        SLACK
+        ```
+
+        FORMAT 2:
+        ```
+        META
+        -------
+        PATH
+        -------
+        EST
+        -------
+        COMPUTE
+        -------
+        SLACK
+        ```
         """
         data = {}
         clock_start = None
@@ -335,15 +364,12 @@ class TimingParser:
         path_end = None
         est_end = None
         compute_end = None
-        print(f"CP Entry: {start} - {end}")
+        log.info(f"CP Entry: {start} - {end}")
 
         # Walk over the lines and every time we find a separator line, we
         # assume that the previous path has ended.
         for i in range(start, end):
             line = self.contents[i].strip()
-            # print(line)
-            # print(self.separator_line(line))
-            # print("xxxxxxxxxxxxxxxxx")
             if self.separator_line(line):
                 if clock_start is None:
                     clock_start = i + 1
@@ -367,13 +393,31 @@ class TimingParser:
                         False
                     ), f"\n{path}\nUnexpected separator line found at line {i}!"
 
+        log.info(
+            f"Clock start: {clock_start}, Path start: {path_start}, "
+            f"Path end: {path_end}, "
+            f"EST end: {est_end}, Compute end: {compute_end}"
+        )
+        assert clock_start is not None, "No clock start found!"
         assert path_start is not None, "No path start found!"
         assert path_end is not None, "No path end found!"
         assert est_end is not None, "No estimated end found!"
-        assert compute_end is not None, "No computed end found!"
 
-        data["header"] = self.parse_critical_path_header(start, clock_start)
-        data["critical_path"] = self.parse_path(path_start, path_end)
+        header_end = None
+        skip_first = None
+        if compute_end is None:
+            # This is format 2. We need to shift things around
+            est_end = path_end
+            path_end = path_start
+            path_start = clock_start
+            header_end = path_start
+            skip_first = True
+        else:
+            header_end = clock_start
+            skip_first = False
+
+        data["header"] = self.parse_critical_path_header(start, header_end)
+        data["critical_path"] = self.parse_path(skip_first, path_start, path_end)
         return data
 
     def parse(self) -> dict:
@@ -384,7 +428,7 @@ class TimingParser:
 
         # Find the line with "Max Delay Paths" and start parsing from there.
         (t_start, t_end) = self.find_table("Max Delay Paths")
-        print(f"Table bounds: {t_start} - {t_end}")
+        log.info(f"Table bounds: {t_start} - {t_end}")
 
         # Find all indices that have work "Slack" in them
         slack_indices = [
@@ -411,6 +455,21 @@ class TimingParser:
         return paths
 
 
+def log_setup():
+    # Color labels for logging
+    log.addLevelName(log.DEBUG, "\033[94mDEBUG\033[0m")
+    log.addLevelName(log.INFO, "\033[92mINFO\033[0m")
+    log.addLevelName(log.WARNING, "\033[93mWARNING\033[0m")
+    log.addLevelName(log.ERROR, "\033[91mERROR\033[0m")
+    log.addLevelName(log.CRITICAL, "\033[95mCRITICAL\033[0m")
+
+    # Format log messages using [LOG_LEVEL] message
+    log.basicConfig(
+        format="[%(levelname)s] %(message)s",
+        level=log.INFO,  # Default to INFO level
+    )
+
+
 if __name__ == "__main__":
     # Take the path information using argparse, parse the file and store its
     # contents, parse the output, and dump the JSON
@@ -419,7 +478,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Parse timing reports.")
     parser.add_argument("file", type=str, help="Path to the timing report file")
+    parser.add_argument(
+        "--log-level", type=str, default="WARN", help="Set the logging level"
+    )
     args = parser.parse_args()
+
+    # Set the logging level based on the command line argument
+    log_setup()
+    log.basicConfig(level=getattr(log, args.log_level.upper(), log.WARN))
 
     with open(args.file, "r") as f:
         contents = f.readlines()

@@ -1,0 +1,182 @@
+# Justfile for Latency-Insensitive Interface Experiment
+
+# Default simulator
+sim := "iverilog"
+simflags := "-g2012"
+
+# Source files
+pipeline_sources := "fp_adder_1stage.sv fp_adder_2stage.sv fp_adder_3stage.sv fp_adder_4stage.sv fp_mult_1stage.sv fp_mult_2stage.sv fp_mult_3stage.sv fp_mult_4stage.sv"
+wrapper_sources := "fp_adder_wrapper.sv fp_mult_wrapper.sv fp_adder_li_wrapper.sv fp_mult_li_wrapper.sv"
+all_sources := pipeline_sources + " " + wrapper_sources
+
+# Show available recipes
+default:
+    @just --list
+
+# Run all tests (recommended for verification)
+test: test-variants test-static test-dynamic-fixed
+    @echo "=== All Tests Completed Successfully ==="
+
+# Test pipeline variants for mathematical consistency
+test-variants:
+    #!/usr/bin/env bash
+    echo "=== Testing Pipeline Variants ==="
+    {{sim}} {{simflags}} -o test_variants test_fp_variants.sv {{pipeline_sources}}
+    ./test_variants
+
+# Test static ALU with different configurations  
+test-static:
+    #!/usr/bin/env bash
+    echo "=== Testing Static ALU ==="
+    {{sim}} {{simflags}} -o test_static static/tests/test_static_alu.sv static/main.sv {{all_sources}}
+    ./test_static
+
+# Test original dynamic ALU implementation
+test-dynamic:
+    #!/usr/bin/env bash
+    echo "=== Testing Dynamic ALU ==="
+    {{sim}} {{simflags}} -o test_dynamic dynamic/tests/test_dynamic_alu.sv dynamic/main.sv {{all_sources}}
+    ./test_dynamic
+
+# Test fixed dynamic ALU implementation (recommended)
+test-dynamic-fixed:
+    #!/usr/bin/env bash
+    echo "=== Testing Fixed Dynamic ALU ==="
+    {{sim}} {{simflags}} -o test_dynamic_fixed dynamic/tests/test_dynamic_alu_fixed.sv dynamic/main.sv {{all_sources}}
+    ./test_dynamic_fixed
+
+# Run custom testbench with optional parameters
+# Usage: just run testbench.sv [sources] [output_name]
+# Examples:
+#   just run debug_test.sv
+#   just run my_test.sv "dynamic/main.sv fp_*.sv"
+#   just run simple_test.sv "" simple
+run testbench sources="" output="":
+    #!/usr/bin/env bash
+    if [ -z "{{testbench}}" ]; then
+        echo "Error: testbench parameter is required"
+        echo "Usage: just run testbench.sv [sources] [output_name]"
+        echo "Examples:"
+        echo "  just run debug_test.sv"
+        echo "  just run my_test.sv \"dynamic/main.sv fp_*.sv\""
+        echo "  just run simple_test.sv \"\" simple"
+        exit 1
+    fi
+    
+    # Set default values
+    output_name="{{output}}"
+    if [ -z "$output_name" ]; then
+        output_name=$(basename "{{testbench}}" .sv)
+    fi
+    
+    source_files="{{sources}}"
+    if [ -z "$source_files" ]; then
+        source_files="{{all_sources}}"
+    fi
+    
+    echo "=== Compiling and Running $output_name ==="
+    echo "Testbench: {{testbench}}"
+    echo "Sources: $source_files"
+    echo "Output: $output_name"
+    
+    {{sim}} {{simflags}} -o "$output_name" "{{testbench}}" $source_files
+    echo "=== Executing $output_name ==="
+    ./"$output_name"
+
+# Lint all modules using Verilator
+lint:
+    #!/usr/bin/env bash
+    echo "=== Linting All Modules ==="
+    for file in {{all_sources}} static/main.sv dynamic/main.sv; do
+        echo "Linting $file..."
+        verilator --lint-only "$file" || true
+    done
+
+# Quick syntax check using iverilog
+syntax-check:
+    #!/usr/bin/env bash
+    echo "=== Syntax Check ==="
+    for file in {{all_sources}} static/main.sv dynamic/main.sv; do
+        echo "Checking $file..."
+        {{sim}} -t null "$file" || true
+    done
+
+# Clean generated files
+clean:
+    #!/usr/bin/env bash
+    echo "=== Cleaning Generated Files ==="
+    rm -f test_variants test_static test_dynamic test_dynamic_fixed
+    rm -f debug_test debug_bp
+    rm -f *.vcd *.dmp *.out
+    rm -f a.out
+    echo "Clean completed"
+
+# Show detailed help information
+help:
+    @echo "Latency-Insensitive Interface Experiment - Just Commands"
+    @echo ""
+    @echo "QUICK START:"
+    @echo "  just test                    # Run all tests (recommended)"
+    @echo "  just run my_test.sv         # Run custom testbench"
+    @echo ""
+    @echo "TEST SUITES:"
+    @echo "  just test-variants          # Test pipeline variant consistency (1000 tests)"
+    @echo "  just test-static            # Test static ALU configurations (100 tests)"
+    @echo "  just test-dynamic-fixed     # Test latency-insensitive ALU (100 tests)"
+    @echo "  just test-dynamic           # Test original dynamic ALU (legacy)"
+    @echo ""
+    @echo "DEVELOPMENT:"
+    @echo "  just run TESTBENCH [SOURCES] [OUTPUT]"
+    @echo "    TESTBENCH - Path to .sv testbench file (required)"
+    @echo "    SOURCES   - Space-separated source files (optional, defaults to all)"
+    @echo "    OUTPUT    - Executable name (optional, defaults to testbench name)"
+    @echo ""
+    @echo "  Examples:"
+    @echo "    just run debug_test.sv"
+    @echo "    just run my_test.sv \"dynamic/main.sv fp_*.sv\""
+    @echo "    just run simple_test.sv \"\" simple"
+    @echo ""
+    @echo "VERIFICATION:"
+    @echo "  just lint                   # Verilator lint check"
+    @echo "  just syntax-check           # Quick syntax verification"
+    @echo "  just clean                  # Remove generated files"
+    @echo ""
+    @echo "For detailed testing information, see TESTING.md"
+
+# Build all test executables (for compatibility)
+build-all:
+    #!/usr/bin/env bash
+    echo "=== Building All Test Executables ==="
+    {{sim}} {{simflags}} -o test_variants test_fp_variants.sv {{pipeline_sources}}
+    {{sim}} {{simflags}} -o test_static static/tests/test_static_alu.sv static/main.sv {{all_sources}}
+    {{sim}} {{simflags}} -o test_dynamic_fixed dynamic/tests/test_dynamic_alu_fixed.sv dynamic/main.sv {{all_sources}}
+    echo "All executables built successfully"
+
+# Debug-specific targets for common debugging tasks
+debug-static testbench="static/tests/test_static_alu.sv":
+    @echo "=== Debugging Static ALU ==="
+    @just run {{testbench}} "static/main.sv {{all_sources}}" debug_static
+
+debug-dynamic testbench="dynamic/tests/test_dynamic_alu_fixed.sv":
+    @echo "=== Debugging Dynamic ALU ==="
+    @just run {{testbench}} "dynamic/main.sv {{all_sources}}" debug_dynamic
+
+# Generate VCD for waveform analysis (requires testbench modification)
+vcd testbench sources="":
+    #!/usr/bin/env bash
+    echo "=== Generating VCD for {{testbench}} ==="
+    echo "Note: Testbench must include \$dumpfile and \$dumpvars commands"
+    output_name=$(basename "{{testbench}}" .sv)
+    source_files="{{sources}}"
+    if [ -z "$source_files" ]; then
+        source_files="{{all_sources}}"
+    fi
+    {{sim}} {{simflags}} -o "$output_name" "{{testbench}}" $source_files
+    ./"$output_name"
+    if [ -f "*.vcd" ]; then
+        echo "VCD file generated: *.vcd"
+    else
+        echo "No VCD file found. Ensure testbench includes:"
+        echo "  \$dumpfile(\"waves.vcd\");"
+        echo "  \$dumpvars(0, module_name);"
+    fi

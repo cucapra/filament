@@ -1,0 +1,2430 @@
+Table bounds: 224 - 959
+CP Entry: 226 - 302
+Parsing entry: 254 - 257
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 257 - 260
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 260 - 263
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_CO[7])
+                                                      0.238     2.378 r  FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]
+                         net (fo=1, routed)           0.028     2.406    FPADD_4/SM_3_5/D_33/r/out_i_4_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 263 - 266
+    SLICE_X21Y76         CARRY8 (Prop_CARRY8_SLICEL_CI_O[3])
+                                                      0.104     2.510 r  FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]
+                         net (fo=1, routed)           0.351     2.861    FPADD_4/LM_3_6/D_33/r/O[3]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 266 - 269
+    SLICE_X22Y78         LUT6 (Prop_G6LUT_SLICEL_I1_O)
+                                                      0.100     2.961 r  FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O
+                         net (fo=10, routed)          0.242     3.202    FPADD_4/LM_3_6/D_33/r/out_reg[11]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 269 - 272
+    SLICE_X21Y80         LUT4 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.164     3.366 f  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O
+                         net (fo=3, routed)           0.195     3.562    FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 272 - 275
+    SLICE_X21Y80         LUT4 (Prop_B6LUT_SLICEL_I0_O)
+                                                      0.100     3.662 r  FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O
+                         net (fo=3, routed)           0.159     3.821    FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 275 - 278
+    SLICE_X21Y83         LUT5 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.080     3.901 r  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O
+                         net (fo=2, routed)           0.152     4.053    FPADD_4/FINAL_EXP_62/out[24]_2
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 278 - 281
+    SLICE_X21Y82         LUT5 (Prop_F6LUT_SLICEL_I3_O)
+                                                      0.148     4.201 r  FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O
+                         net (fo=3, routed)           0.174     4.374    FPADD_4/FINAL_EXP_62/out_reg[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 281 - 284
+    SLICE_X21Y85         LUT5 (Prop_C6LUT_SLICEL_I2_O)
+                                                      0.113     4.487 r  FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O
+                         net (fo=3, routed)           0.105     4.593    FPADD_4/FINAL_EXP_62/out_reg[2]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 284 - 287
+    SLICE_X21Y85         LUT5 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.118     4.711 r  FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2/O
+                         net (fo=3, routed)           0.187     4.898    FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 287 - 290
+    SLICE_X20Y84         LUT5 (Prop_D5LUT_SLICEM_I0_O)
+                                                      0.082     4.980 r  FPADD_4/FINAL_EXP_62/out[29]_INST_0/O
+                         net (fo=0)                   0.045     5.025    out[29]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 303 - 379
+Parsing entry: 331 - 334
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 334 - 337
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 337 - 340
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_CO[7])
+                                                      0.238     2.378 r  FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]
+                         net (fo=1, routed)           0.028     2.406    FPADD_4/SM_3_5/D_33/r/out_i_4_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 340 - 343
+    SLICE_X21Y76         CARRY8 (Prop_CARRY8_SLICEL_CI_O[3])
+                                                      0.104     2.510 r  FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]
+                         net (fo=1, routed)           0.351     2.861    FPADD_4/LM_3_6/D_33/r/O[3]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 343 - 346
+    SLICE_X22Y78         LUT6 (Prop_G6LUT_SLICEL_I1_O)
+                                                      0.100     2.961 r  FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O
+                         net (fo=10, routed)          0.242     3.202    FPADD_4/LM_3_6/D_33/r/out_reg[11]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 346 - 349
+    SLICE_X21Y80         LUT4 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.164     3.366 f  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O
+                         net (fo=3, routed)           0.195     3.562    FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 349 - 352
+    SLICE_X21Y80         LUT4 (Prop_B6LUT_SLICEL_I0_O)
+                                                      0.100     3.662 r  FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O
+                         net (fo=3, routed)           0.159     3.821    FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 352 - 355
+    SLICE_X21Y83         LUT5 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.080     3.901 r  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O
+                         net (fo=2, routed)           0.152     4.053    FPADD_4/FINAL_EXP_62/out[24]_2
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 355 - 358
+    SLICE_X21Y82         LUT5 (Prop_F6LUT_SLICEL_I3_O)
+                                                      0.148     4.201 r  FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O
+                         net (fo=3, routed)           0.174     4.374    FPADD_4/FINAL_EXP_62/out_reg[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 358 - 361
+    SLICE_X21Y85         LUT5 (Prop_C6LUT_SLICEL_I2_O)
+                                                      0.113     4.487 r  FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O
+                         net (fo=3, routed)           0.105     4.593    FPADD_4/FINAL_EXP_62/out_reg[2]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 361 - 364
+    SLICE_X21Y85         LUT5 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.118     4.711 r  FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2/O
+                         net (fo=3, routed)           0.187     4.898    FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 364 - 367
+    SLICE_X20Y84         LUT3 (Prop_D6LUT_SLICEM_I0_O)
+                                                      0.062     4.960 r  FPADD_4/FINAL_EXP_62/out[28]_INST_0/O
+                         net (fo=0)                   0.000     4.960    out[28]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 380 - 456
+Parsing entry: 408 - 411
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 411 - 414
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 414 - 417
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_CO[7])
+                                                      0.238     2.378 r  FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]
+                         net (fo=1, routed)           0.028     2.406    FPADD_4/SM_3_5/D_33/r/out_i_4_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 417 - 420
+    SLICE_X21Y76         CARRY8 (Prop_CARRY8_SLICEL_CI_O[3])
+                                                      0.104     2.510 r  FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]
+                         net (fo=1, routed)           0.351     2.861    FPADD_4/LM_3_6/D_33/r/O[3]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 420 - 423
+    SLICE_X22Y78         LUT6 (Prop_G6LUT_SLICEL_I1_O)
+                                                      0.100     2.961 r  FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O
+                         net (fo=10, routed)          0.242     3.202    FPADD_4/LM_3_6/D_33/r/out_reg[11]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 423 - 426
+    SLICE_X21Y80         LUT4 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.164     3.366 f  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O
+                         net (fo=3, routed)           0.195     3.562    FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 426 - 429
+    SLICE_X21Y80         LUT4 (Prop_B6LUT_SLICEL_I0_O)
+                                                      0.100     3.662 r  FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O
+                         net (fo=3, routed)           0.159     3.821    FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 429 - 432
+    SLICE_X21Y83         LUT5 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.080     3.901 r  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O
+                         net (fo=2, routed)           0.152     4.053    FPADD_4/FINAL_EXP_62/out[24]_2
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 432 - 435
+    SLICE_X21Y82         LUT5 (Prop_F6LUT_SLICEL_I3_O)
+                                                      0.148     4.201 r  FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O
+                         net (fo=3, routed)           0.174     4.374    FPADD_4/FINAL_EXP_62/out_reg[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 435 - 438
+    SLICE_X21Y85         LUT5 (Prop_C6LUT_SLICEL_I2_O)
+                                                      0.113     4.487 r  FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O
+                         net (fo=3, routed)           0.105     4.593    FPADD_4/FINAL_EXP_62/out_reg[2]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 438 - 441
+    SLICE_X21Y85         LUT5 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.118     4.711 r  FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2/O
+                         net (fo=3, routed)           0.140     4.851    FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 441 - 444
+    SLICE_X20Y84         LUT6 (Prop_H6LUT_SLICEM_I2_O)
+                                                      0.041     4.892 r  FPADD_4/FINAL_EXP_62/out[30]_INST_0/O
+                         net (fo=0)                   0.000     4.892    out[30]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 457 - 527
+Parsing entry: 485 - 488
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 488 - 491
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 491 - 494
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_O[6])
+                                                      0.279     2.419 r  FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]
+                         net (fo=1, routed)           0.258     2.677    FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 494 - 497
+    SLICE_X22Y74         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.064     2.741 r  FPADD_4/LM_3_6/D_33/r/out_i_1__0/O
+                         net (fo=12, routed)          0.405     3.146    FPADD_4/LM_3_6/D_33/r/out_reg[6]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 497 - 500
+    SLICE_X20Y80         LUT6 (Prop_G6LUT_SLICEM_I1_O)
+                                                      0.179     3.325 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O
+                         net (fo=1, routed)           0.059     3.384    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 500 - 503
+    SLICE_X20Y80         LUT6 (Prop_B6LUT_SLICEM_I0_O)
+                                                      0.150     3.534 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O
+                         net (fo=1, routed)           0.110     3.644    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 503 - 506
+    SLICE_X20Y79         LUT6 (Prop_H6LUT_SLICEM_I2_O)
+                                                      0.041     3.685 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O
+                         net (fo=1, routed)           0.107     3.792    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 506 - 509
+    SLICE_X20Y79         LUT4 (Prop_E6LUT_SLICEM_I2_O)
+                                                      0.101     3.893 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O
+                         net (fo=26, routed)          0.342     4.234    FPADD_4/_FINAL_MANTISSA_63/out[19]_1
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 509 - 512
+    SLICE_X22Y82         LUT6 (Prop_H6LUT_SLICEL_I4_O)
+                                                      0.179     4.413 r  FPADD_4/_FINAL_MANTISSA_63/out[16]_INST_0_i_1/O
+                         net (fo=4, routed)           0.248     4.661    FPADD_4/_FINAL_MANTISSA_63/out[16]_INST_0_i_1_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 512 - 515
+    SLICE_X24Y81         LUT6 (Prop_D6LUT_SLICEM_I1_O)
+                                                      0.174     4.835 r  FPADD_4/_FINAL_MANTISSA_63/out[16]_INST_0/O
+                         net (fo=0)                   0.000     4.835    out[16]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 528 - 598
+Parsing entry: 556 - 559
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 559 - 562
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 562 - 565
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_O[6])
+                                                      0.279     2.419 r  FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]
+                         net (fo=1, routed)           0.258     2.677    FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 565 - 568
+    SLICE_X22Y74         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.064     2.741 r  FPADD_4/LM_3_6/D_33/r/out_i_1__0/O
+                         net (fo=12, routed)          0.405     3.146    FPADD_4/LM_3_6/D_33/r/out_reg[6]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 568 - 571
+    SLICE_X20Y80         LUT6 (Prop_G6LUT_SLICEM_I1_O)
+                                                      0.179     3.325 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O
+                         net (fo=1, routed)           0.059     3.384    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 571 - 574
+    SLICE_X20Y80         LUT6 (Prop_B6LUT_SLICEM_I0_O)
+                                                      0.150     3.534 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O
+                         net (fo=1, routed)           0.110     3.644    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 574 - 577
+    SLICE_X20Y79         LUT6 (Prop_H6LUT_SLICEM_I2_O)
+                                                      0.041     3.685 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O
+                         net (fo=1, routed)           0.107     3.792    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 577 - 580
+    SLICE_X20Y79         LUT4 (Prop_E6LUT_SLICEM_I2_O)
+                                                      0.101     3.893 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O
+                         net (fo=26, routed)          0.390     4.283    FPADD_4/_FINAL_MANTISSA_63/out[19]_1
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 580 - 583
+    SLICE_X23Y83         LUT6 (Prop_H6LUT_SLICEL_I5_O)
+                                                      0.149     4.432 r  FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0_i_1/O
+                         net (fo=4, routed)           0.182     4.614    FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0_i_1_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 583 - 586
+    SLICE_X22Y83         LUT6 (Prop_C6LUT_SLICEL_I1_O)
+                                                      0.098     4.712 r  FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0/O
+                         net (fo=0)                   0.000     4.712    out[11]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 599 - 669
+Parsing entry: 627 - 630
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 630 - 633
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 633 - 636
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_O[6])
+                                                      0.279     2.419 r  FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]
+                         net (fo=1, routed)           0.258     2.677    FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 636 - 639
+    SLICE_X22Y74         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.064     2.741 r  FPADD_4/LM_3_6/D_33/r/out_i_1__0/O
+                         net (fo=12, routed)          0.405     3.146    FPADD_4/LM_3_6/D_33/r/out_reg[6]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 639 - 642
+    SLICE_X20Y80         LUT6 (Prop_G6LUT_SLICEM_I1_O)
+                                                      0.179     3.325 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O
+                         net (fo=1, routed)           0.059     3.384    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 642 - 645
+    SLICE_X20Y80         LUT6 (Prop_B6LUT_SLICEM_I0_O)
+                                                      0.150     3.534 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O
+                         net (fo=1, routed)           0.110     3.644    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 645 - 648
+    SLICE_X20Y79         LUT6 (Prop_H6LUT_SLICEM_I2_O)
+                                                      0.041     3.685 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O
+                         net (fo=1, routed)           0.107     3.792    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 648 - 651
+    SLICE_X20Y79         LUT4 (Prop_E6LUT_SLICEM_I2_O)
+                                                      0.101     3.893 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O
+                         net (fo=26, routed)          0.285     4.178    FPADD_4/_FINAL_MANTISSA_63/out[19]_1
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 651 - 654
+    SLICE_X22Y82         LUT6 (Prop_G6LUT_SLICEL_I4_O)
+                                                      0.178     4.356 r  FPADD_4/_FINAL_MANTISSA_63/out[20]_INST_0_i_1/O
+                         net (fo=4, routed)           0.224     4.580    FPADD_4/_FINAL_MANTISSA_63/out[20]_INST_0_i_1_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 654 - 657
+    SLICE_X24Y81         LUT6 (Prop_F6LUT_SLICEM_I1_O)
+                                                      0.113     4.693 r  FPADD_4/_FINAL_MANTISSA_63/out[20]_INST_0/O
+                         net (fo=0)                   0.000     4.693    out[20]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 670 - 740
+Parsing entry: 698 - 701
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 701 - 704
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 704 - 707
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_O[6])
+                                                      0.279     2.419 r  FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]
+                         net (fo=1, routed)           0.258     2.677    FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 707 - 710
+    SLICE_X22Y74         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.064     2.741 r  FPADD_4/LM_3_6/D_33/r/out_i_1__0/O
+                         net (fo=12, routed)          0.405     3.146    FPADD_4/LM_3_6/D_33/r/out_reg[6]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 710 - 713
+    SLICE_X20Y80         LUT6 (Prop_G6LUT_SLICEM_I1_O)
+                                                      0.179     3.325 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O
+                         net (fo=1, routed)           0.059     3.384    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 713 - 716
+    SLICE_X20Y80         LUT6 (Prop_B6LUT_SLICEM_I0_O)
+                                                      0.150     3.534 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O
+                         net (fo=1, routed)           0.110     3.644    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 716 - 719
+    SLICE_X20Y79         LUT6 (Prop_H6LUT_SLICEM_I2_O)
+                                                      0.041     3.685 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O
+                         net (fo=1, routed)           0.107     3.792    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 719 - 722
+    SLICE_X20Y79         LUT4 (Prop_E6LUT_SLICEM_I2_O)
+                                                      0.101     3.893 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O
+                         net (fo=26, routed)          0.274     4.167    FPADD_4/_FINAL_MANTISSA_63/out[19]_1
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 722 - 725
+    SLICE_X21Y81         LUT6 (Prop_H6LUT_SLICEL_I4_O)
+                                                      0.100     4.267 r  FPADD_4/_FINAL_MANTISSA_63/out[21]_INST_0_i_1/O
+                         net (fo=4, routed)           0.246     4.513    FPADD_4/_FINAL_MANTISSA_63/out[21]_INST_0_i_1_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 725 - 728
+    SLICE_X24Y81         LUT6 (Prop_G6LUT_SLICEM_I0_O)
+                                                      0.179     4.692 r  FPADD_4/_FINAL_MANTISSA_63/out[19]_INST_0/O
+                         net (fo=0)                   0.000     4.692    out[19]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 741 - 814
+Parsing entry: 769 - 772
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 772 - 775
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 775 - 778
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_CO[7])
+                                                      0.238     2.378 r  FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]
+                         net (fo=1, routed)           0.028     2.406    FPADD_4/SM_3_5/D_33/r/out_i_4_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 778 - 781
+    SLICE_X21Y76         CARRY8 (Prop_CARRY8_SLICEL_CI_O[3])
+                                                      0.104     2.510 r  FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]
+                         net (fo=1, routed)           0.351     2.861    FPADD_4/LM_3_6/D_33/r/O[3]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 781 - 784
+    SLICE_X22Y78         LUT6 (Prop_G6LUT_SLICEL_I1_O)
+                                                      0.100     2.961 r  FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O
+                         net (fo=10, routed)          0.242     3.202    FPADD_4/LM_3_6/D_33/r/out_reg[11]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 784 - 787
+    SLICE_X21Y80         LUT4 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.164     3.366 f  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O
+                         net (fo=3, routed)           0.195     3.562    FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 787 - 790
+    SLICE_X21Y80         LUT4 (Prop_B6LUT_SLICEL_I0_O)
+                                                      0.100     3.662 r  FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O
+                         net (fo=3, routed)           0.159     3.821    FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 790 - 793
+    SLICE_X21Y83         LUT5 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.080     3.901 r  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O
+                         net (fo=2, routed)           0.152     4.053    FPADD_4/FINAL_EXP_62/out[24]_2
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 793 - 796
+    SLICE_X21Y82         LUT5 (Prop_F6LUT_SLICEL_I3_O)
+                                                      0.148     4.201 r  FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O
+                         net (fo=3, routed)           0.174     4.374    FPADD_4/FINAL_EXP_62/out_reg[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 796 - 799
+    SLICE_X21Y85         LUT5 (Prop_C6LUT_SLICEL_I2_O)
+                                                      0.113     4.487 r  FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O
+                         net (fo=3, routed)           0.105     4.593    FPADD_4/FINAL_EXP_62/out_reg[2]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 799 - 802
+    SLICE_X21Y85         LUT3 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.099     4.692 r  FPADD_4/FINAL_EXP_62/out[26]_INST_0/O
+                         net (fo=0)                   0.000     4.692    out[26]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 815 - 888
+Parsing entry: 843 - 846
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 846 - 849
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 849 - 852
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_CO[7])
+                                                      0.238     2.378 r  FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]
+                         net (fo=1, routed)           0.028     2.406    FPADD_4/SM_3_5/D_33/r/out_i_4_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 852 - 855
+    SLICE_X21Y76         CARRY8 (Prop_CARRY8_SLICEL_CI_O[3])
+                                                      0.104     2.510 r  FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]
+                         net (fo=1, routed)           0.351     2.861    FPADD_4/LM_3_6/D_33/r/O[3]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 855 - 858
+    SLICE_X22Y78         LUT6 (Prop_G6LUT_SLICEL_I1_O)
+                                                      0.100     2.961 r  FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O
+                         net (fo=10, routed)          0.242     3.202    FPADD_4/LM_3_6/D_33/r/out_reg[11]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 858 - 861
+    SLICE_X21Y80         LUT4 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.164     3.366 f  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O
+                         net (fo=3, routed)           0.195     3.562    FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 861 - 864
+    SLICE_X21Y80         LUT4 (Prop_B6LUT_SLICEL_I0_O)
+                                                      0.100     3.662 r  FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O
+                         net (fo=3, routed)           0.159     3.821    FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 864 - 867
+    SLICE_X21Y83         LUT5 (Prop_D5LUT_SLICEL_I0_O)
+                                                      0.080     3.901 r  FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O
+                         net (fo=2, routed)           0.152     4.053    FPADD_4/FINAL_EXP_62/out[24]_2
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 867 - 870
+    SLICE_X21Y82         LUT5 (Prop_F6LUT_SLICEL_I3_O)
+                                                      0.148     4.201 r  FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O
+                         net (fo=3, routed)           0.174     4.374    FPADD_4/FINAL_EXP_62/out_reg[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 870 - 873
+    SLICE_X21Y85         LUT5 (Prop_C6LUT_SLICEL_I2_O)
+                                                      0.113     4.487 r  FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O
+                         net (fo=3, routed)           0.103     4.591    FPADD_4/LM_3_6/D_33/r/out[27]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 873 - 876
+    SLICE_X21Y85         LUT5 (Prop_G6LUT_SLICEL_I2_O)
+                                                      0.100     4.691 r  FPADD_4/LM_3_6/D_33/r/out[27]_INST_0/O
+                         net (fo=0)                   0.000     4.691    out[27]
+
+xxxxxxxxxxxxxxxxx
+CP Entry: 889 - 959
+Parsing entry: 917 - 920
+    SLICE_X22Y74         FDRE (Prop_DFF2_SLICEL_C_Q)
+                                                      0.098     1.766 r  FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q
+                         net (fo=3, routed)           0.185     1.951    FPADD_4/SM_3_5/D_33/r/Q[0]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 920 - 923
+    SLICE_X21Y75         LUT2 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.178     2.129 r  FPADD_4/SM_3_5/D_33/r/out_i_13/O
+                         net (fo=1, routed)           0.011     2.140    FPADD_4/SM_3_5/D_33/r/out_i_13_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 923 - 926
+    SLICE_X21Y75         CARRY8 (Prop_CARRY8_SLICEL_S[0]_O[6])
+                                                      0.279     2.419 r  FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]
+                         net (fo=1, routed)           0.258     2.677    FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 926 - 929
+    SLICE_X22Y74         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.064     2.741 r  FPADD_4/LM_3_6/D_33/r/out_i_1__0/O
+                         net (fo=12, routed)          0.405     3.146    FPADD_4/LM_3_6/D_33/r/out_reg[6]_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 929 - 932
+    SLICE_X20Y80         LUT6 (Prop_G6LUT_SLICEM_I1_O)
+                                                      0.179     3.325 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O
+                         net (fo=1, routed)           0.059     3.384    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 932 - 935
+    SLICE_X20Y80         LUT6 (Prop_B6LUT_SLICEM_I0_O)
+                                                      0.150     3.534 f  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O
+                         net (fo=1, routed)           0.110     3.644    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 935 - 938
+    SLICE_X20Y79         LUT6 (Prop_H6LUT_SLICEM_I2_O)
+                                                      0.041     3.685 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O
+                         net (fo=1, routed)           0.107     3.792    FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 938 - 941
+    SLICE_X20Y79         LUT4 (Prop_E6LUT_SLICEM_I2_O)
+                                                      0.101     3.893 r  FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O
+                         net (fo=26, routed)          0.390     4.283    FPADD_4/_FINAL_MANTISSA_63/out[19]_1
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 941 - 944
+    SLICE_X23Y83         LUT6 (Prop_H6LUT_SLICEL_I5_O)
+                                                      0.149     4.432 r  FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0_i_1/O
+                         net (fo=4, routed)           0.069     4.501    FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0_i_1_n_0
+
+xxxxxxxxxxxxxxxxx
+Parsing entry: 944 - 947
+    SLICE_X23Y83         LUT6 (Prop_B6LUT_SLICEL_I3_O)
+                                                      0.177     4.678 r  FPADD_4/_FINAL_MANTISSA_63/out[8]_INST_0/O
+                         net (fo=0)                   0.000     4.678    out[8]
+
+xxxxxxxxxxxxxxxxx
+[
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.89,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[29]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.357,
+        "logic": 1.523,
+        "logic_percent": 45.368,
+        "route": 1.834,
+        "route_percent": 54.632
+      },
+      "logic_levels": {
+        "levels": 11,
+        "CARRY8": 2,
+        "LUT2": 1,
+        "LUT4": 2,
+        "LUT5": 5,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_CO[7])",
+        "logic_delay": 0.238,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]",
+        "fan_out": 1,
+        "net_delay": 0.028,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_4_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 76
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_CI_O[3])",
+        "logic_delay": 0.104,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]",
+        "fan_out": 1,
+        "net_delay": 0.351,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/O[3]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 78
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O",
+        "fan_out": 10,
+        "net_delay": 0.242,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[11]_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.164,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O",
+        "fan_out": 3,
+        "net_delay": 0.195,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_B6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O",
+        "fan_out": 3,
+        "net_delay": 0.159,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 83
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.08,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O",
+        "fan_out": 2,
+        "net_delay": 0.152,
+        "net_name": "FPADD_4/FINAL_EXP_62/out[24]_2"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 82
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_F6LUT_SLICEL_I3_O)",
+        "logic_delay": 0.148,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.174,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_C6LUT_SLICEL_I2_O)",
+        "logic_delay": 0.113,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.105,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[2]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEL_I2_O)",
+        "logic_delay": 0.118,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.187,
+        "net_name": "FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 84
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.082,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[29]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.045,
+        "net_name": "out[29]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.955,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[28]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.292,
+        "logic": 1.503,
+        "logic_percent": 45.656,
+        "route": 1.789,
+        "route_percent": 54.344
+      },
+      "logic_levels": {
+        "levels": 11,
+        "CARRY8": 2,
+        "LUT2": 1,
+        "LUT3": 1,
+        "LUT4": 2,
+        "LUT5": 4,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_CO[7])",
+        "logic_delay": 0.238,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]",
+        "fan_out": 1,
+        "net_delay": 0.028,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_4_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 76
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_CI_O[3])",
+        "logic_delay": 0.104,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]",
+        "fan_out": 1,
+        "net_delay": 0.351,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/O[3]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 78
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O",
+        "fan_out": 10,
+        "net_delay": 0.242,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[11]_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.164,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O",
+        "fan_out": 3,
+        "net_delay": 0.195,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_B6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O",
+        "fan_out": 3,
+        "net_delay": 0.159,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 83
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.08,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O",
+        "fan_out": 2,
+        "net_delay": 0.152,
+        "net_name": "FPADD_4/FINAL_EXP_62/out[24]_2"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 82
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_F6LUT_SLICEL_I3_O)",
+        "logic_delay": 0.148,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.174,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_C6LUT_SLICEL_I2_O)",
+        "logic_delay": 0.113,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.105,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[2]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEL_I2_O)",
+        "logic_delay": 0.118,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.187,
+        "net_name": "FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 84
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_D6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.062,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[28]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[28]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.023,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[30]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.224,
+        "logic": 1.482,
+        "logic_percent": 45.968,
+        "route": 1.742,
+        "route_percent": 54.032
+      },
+      "logic_levels": {
+        "levels": 11,
+        "CARRY8": 2,
+        "LUT2": 1,
+        "LUT4": 2,
+        "LUT5": 4,
+        "LUT6": 2
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_CO[7])",
+        "logic_delay": 0.238,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]",
+        "fan_out": 1,
+        "net_delay": 0.028,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_4_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 76
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_CI_O[3])",
+        "logic_delay": 0.104,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]",
+        "fan_out": 1,
+        "net_delay": 0.351,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/O[3]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 78
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O",
+        "fan_out": 10,
+        "net_delay": 0.242,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[11]_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.164,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O",
+        "fan_out": 3,
+        "net_delay": 0.195,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_B6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O",
+        "fan_out": 3,
+        "net_delay": 0.159,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 83
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.08,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O",
+        "fan_out": 2,
+        "net_delay": 0.152,
+        "net_name": "FPADD_4/FINAL_EXP_62/out[24]_2"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 82
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_F6LUT_SLICEL_I3_O)",
+        "logic_delay": 0.148,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.174,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_C6LUT_SLICEL_I2_O)",
+        "logic_delay": 0.113,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.105,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[2]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEL_I2_O)",
+        "logic_delay": 0.118,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.14,
+        "net_name": "FPADD_4/FINAL_EXP_62/out[30]_INST_0_i_2_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 84
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.041,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[30]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[30]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.08,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[16]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.167,
+        "logic": 1.443,
+        "logic_percent": 45.561,
+        "route": 1.724,
+        "route_percent": 54.439
+      },
+      "logic_levels": {
+        "levels": 9,
+        "CARRY8": 1,
+        "LUT2": 1,
+        "LUT4": 1,
+        "LUT6": 6
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_O[6])",
+        "logic_delay": 0.279,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]",
+        "fan_out": 1,
+        "net_delay": 0.258,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.064,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out_i_1__0/O",
+        "fan_out": 12,
+        "net_delay": 0.405,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[6]_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I1_O)",
+        "logic_delay": 0.179,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O",
+        "fan_out": 1,
+        "net_delay": 0.059,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_B6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.15,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O",
+        "fan_out": 1,
+        "net_delay": 0.11,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.041,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O",
+        "fan_out": 1,
+        "net_delay": 0.107,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_E6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.101,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O",
+        "fan_out": 26,
+        "net_delay": 0.342,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[19]_1"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 82
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I4_O)",
+        "logic_delay": 0.179,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[16]_INST_0_i_1/O",
+        "fan_out": 4,
+        "net_delay": 0.248,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[16]_INST_0_i_1_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 81
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_D6LUT_SLICEM_I1_O)",
+        "logic_delay": 0.174,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[16]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[16]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.202,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[11]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.044,
+        "logic": 1.337,
+        "logic_percent": 43.918,
+        "route": 1.707,
+        "route_percent": 56.082
+      },
+      "logic_levels": {
+        "levels": 9,
+        "CARRY8": 1,
+        "LUT2": 1,
+        "LUT4": 1,
+        "LUT6": 6
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_O[6])",
+        "logic_delay": 0.279,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]",
+        "fan_out": 1,
+        "net_delay": 0.258,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.064,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out_i_1__0/O",
+        "fan_out": 12,
+        "net_delay": 0.405,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[6]_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I1_O)",
+        "logic_delay": 0.179,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O",
+        "fan_out": 1,
+        "net_delay": 0.059,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_B6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.15,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O",
+        "fan_out": 1,
+        "net_delay": 0.11,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.041,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O",
+        "fan_out": 1,
+        "net_delay": 0.107,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_E6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.101,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O",
+        "fan_out": 26,
+        "net_delay": 0.39,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[19]_1"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 83
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I5_O)",
+        "logic_delay": 0.149,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0_i_1/O",
+        "fan_out": 4,
+        "net_delay": 0.182,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0_i_1_n_0"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 83
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_C6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[11]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.222,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[20]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.025,
+        "logic": 1.381,
+        "logic_percent": 45.655,
+        "route": 1.644,
+        "route_percent": 54.345
+      },
+      "logic_levels": {
+        "levels": 9,
+        "CARRY8": 1,
+        "LUT2": 1,
+        "LUT4": 1,
+        "LUT6": 6
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_O[6])",
+        "logic_delay": 0.279,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]",
+        "fan_out": 1,
+        "net_delay": 0.258,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.064,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out_i_1__0/O",
+        "fan_out": 12,
+        "net_delay": 0.405,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[6]_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I1_O)",
+        "logic_delay": 0.179,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O",
+        "fan_out": 1,
+        "net_delay": 0.059,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_B6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.15,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O",
+        "fan_out": 1,
+        "net_delay": 0.11,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.041,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O",
+        "fan_out": 1,
+        "net_delay": 0.107,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_E6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.101,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O",
+        "fan_out": 26,
+        "net_delay": 0.285,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[19]_1"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 82
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEL_I4_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[20]_INST_0_i_1/O",
+        "fan_out": 4,
+        "net_delay": 0.224,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[20]_INST_0_i_1_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 81
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_F6LUT_SLICEM_I1_O)",
+        "logic_delay": 0.113,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[20]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[20]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.223,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[19]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.024,
+        "logic": 1.369,
+        "logic_percent": 45.271,
+        "route": 1.655,
+        "route_percent": 54.729
+      },
+      "logic_levels": {
+        "levels": 9,
+        "CARRY8": 1,
+        "LUT2": 1,
+        "LUT4": 1,
+        "LUT6": 6
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_O[6])",
+        "logic_delay": 0.279,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]",
+        "fan_out": 1,
+        "net_delay": 0.258,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.064,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out_i_1__0/O",
+        "fan_out": 12,
+        "net_delay": 0.405,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[6]_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I1_O)",
+        "logic_delay": 0.179,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O",
+        "fan_out": 1,
+        "net_delay": 0.059,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_B6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.15,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O",
+        "fan_out": 1,
+        "net_delay": 0.11,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.041,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O",
+        "fan_out": 1,
+        "net_delay": 0.107,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_E6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.101,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O",
+        "fan_out": 26,
+        "net_delay": 0.274,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[19]_1"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 81
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I4_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[21]_INST_0_i_1/O",
+        "fan_out": 4,
+        "net_delay": 0.246,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[21]_INST_0_i_1_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 81
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.179,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[19]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[19]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.223,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[26]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.024,
+        "logic": 1.422,
+        "logic_percent": 47.027,
+        "route": 1.602,
+        "route_percent": 52.973
+      },
+      "logic_levels": {
+        "levels": 10,
+        "CARRY8": 2,
+        "LUT2": 1,
+        "LUT3": 1,
+        "LUT4": 2,
+        "LUT5": 3,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_CO[7])",
+        "logic_delay": 0.238,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]",
+        "fan_out": 1,
+        "net_delay": 0.028,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_4_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 76
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_CI_O[3])",
+        "logic_delay": 0.104,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]",
+        "fan_out": 1,
+        "net_delay": 0.351,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/O[3]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 78
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O",
+        "fan_out": 10,
+        "net_delay": 0.242,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[11]_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.164,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O",
+        "fan_out": 3,
+        "net_delay": 0.195,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_B6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O",
+        "fan_out": 3,
+        "net_delay": 0.159,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 83
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.08,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O",
+        "fan_out": 2,
+        "net_delay": 0.152,
+        "net_name": "FPADD_4/FINAL_EXP_62/out[24]_2"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 82
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_F6LUT_SLICEL_I3_O)",
+        "logic_delay": 0.148,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.174,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_C6LUT_SLICEL_I2_O)",
+        "logic_delay": 0.113,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.105,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[2]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_D6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.099,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[26]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[26]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.224,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[27]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.023,
+        "logic": 1.423,
+        "logic_percent": 47.075,
+        "route": 1.6,
+        "route_percent": 52.925
+      },
+      "logic_levels": {
+        "levels": 10,
+        "CARRY8": 2,
+        "LUT2": 1,
+        "LUT4": 2,
+        "LUT5": 4,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_CO[7])",
+        "logic_delay": 0.238,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/CO[7]",
+        "fan_out": 1,
+        "net_delay": 0.028,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_4_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 76
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_CI_O[3])",
+        "logic_delay": 0.104,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_7/O[3]",
+        "fan_out": 1,
+        "net_delay": 0.351,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/O[3]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 78
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[13]_INST_0_i_2/O",
+        "fan_out": 10,
+        "net_delay": 0.242,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[11]_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.164,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15/O",
+        "fan_out": 3,
+        "net_delay": 0.195,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_15_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 80
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_B6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9/O",
+        "fan_out": 3,
+        "net_delay": 0.159,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0_i_9_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 83
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_D5LUT_SLICEL_I0_O)",
+        "logic_delay": 0.08,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[25]_INST_0_i_12/O",
+        "fan_out": 2,
+        "net_delay": 0.152,
+        "net_name": "FPADD_4/FINAL_EXP_62/out[24]_2"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 82
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_F6LUT_SLICEL_I3_O)",
+        "logic_delay": 0.148,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[25]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.174,
+        "net_name": "FPADD_4/FINAL_EXP_62/out_reg[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_C6LUT_SLICEL_I2_O)",
+        "logic_delay": 0.113,
+        "edge": "r",
+        "resource_name": "FPADD_4/FINAL_EXP_62/out[27]_INST_0_i_2/O",
+        "fan_out": 3,
+        "net_delay": 0.103,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[27]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 85
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_G6LUT_SLICEL_I2_O)",
+        "logic_delay": 0.1,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[27]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[27]"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.236,
+      "source": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/C",
+      "destination": "out[8]",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 3.01,
+        "logic": 1.416,
+        "logic_percent": 47.038,
+        "route": 1.594,
+        "route_percent": 52.962
+      },
+      "logic_levels": {
+        "levels": 9,
+        "CARRY8": 1,
+        "LUT2": 1,
+        "LUT4": 1,
+        "LUT6": 6
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_DFF2_SLICEL_C_Q)",
+        "logic_delay": 0.098,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_reg[0]/Q",
+        "fan_out": 3,
+        "net_delay": 0.185,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/Q[0]"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "LUT2",
+        "delay_type": "(Prop_A6LUT_SLICEL_I0_O)",
+        "logic_delay": 0.178,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_13/O",
+        "fan_out": 1,
+        "net_delay": 0.011,
+        "net_name": "FPADD_4/SM_3_5/D_33/r/out_i_13_n_0"
+      },
+      {
+        "loc": {
+          "x": 21,
+          "y": 75
+        },
+        "kind": "CARRY8",
+        "delay_type": "(Prop_CARRY8_SLICEL_S[0]_O[6])",
+        "logic_delay": 0.279,
+        "edge": "r",
+        "resource_name": "FPADD_4/SM_3_5/D_33/r/out_i_4/O[6]",
+        "fan_out": 1,
+        "net_delay": 0.258,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[9]_INST_0_i_1[6]"
+      },
+      {
+        "loc": {
+          "x": 22,
+          "y": 74
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.064,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out_i_1__0/O",
+        "fan_out": 12,
+        "net_delay": 0.405,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out_reg[6]_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I1_O)",
+        "logic_delay": 0.179,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58/O",
+        "fan_out": 1,
+        "net_delay": 0.059,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_58_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 80
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_B6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.15,
+        "edge": "f",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54/O",
+        "fan_out": 1,
+        "net_delay": 0.11,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_54_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.041,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35/O",
+        "fan_out": 1,
+        "net_delay": 0.107,
+        "net_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_35_n_0"
+      },
+      {
+        "loc": {
+          "x": 20,
+          "y": 79
+        },
+        "kind": "LUT4",
+        "delay_type": "(Prop_E6LUT_SLICEM_I2_O)",
+        "logic_delay": 0.101,
+        "edge": "r",
+        "resource_name": "FPADD_4/LM_3_6/D_33/r/out[22]_INST_0_i_11/O",
+        "fan_out": 26,
+        "net_delay": 0.39,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[19]_1"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 83
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_H6LUT_SLICEL_I5_O)",
+        "logic_delay": 0.149,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0_i_1/O",
+        "fan_out": 4,
+        "net_delay": 0.069,
+        "net_name": "FPADD_4/_FINAL_MANTISSA_63/out[11]_INST_0_i_1_n_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 83
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_B6LUT_SLICEL_I3_O)",
+        "logic_delay": 0.177,
+        "edge": "r",
+        "resource_name": "FPADD_4/_FINAL_MANTISSA_63/out[8]_INST_0/O",
+        "fan_out": 0,
+        "net_delay": 0.0,
+        "net_name": "out[8]"
+      }
+    ]
+  }
+]

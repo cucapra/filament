@@ -1,0 +1,1643 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version      : Vivado v.2023.2 (lin64) Build 4029153 Fri Oct 13 20:13:54 MDT 2023
+| Date              : Wed Jul 30 16:43:15 2025
+| Host              : havarti.cs.cornell.edu running 64-bit Ubuntu 22.04.5 LTS
+| Command           : report_timing_summary -max_paths 10 -report_unconstrained -file main_timing_summary_routed.rpt -pb main_timing_summary_routed.pb -rpx main_timing_summary_routed.rpx -warn_on_violation
+| Design            : main
+| Device            : xczu3eg-sbva484
+| Speed File        : -1  PRODUCTION 1.30 05-15-2022
+| Design State      : Routed
+| Temperature Grade : E
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Summary Report
+
+------------------------------------------------------------------------------------------------
+| Timer Settings
+| --------------
+------------------------------------------------------------------------------------------------
+
+  Enable Multi Corner Analysis               :  Yes
+  Enable Pessimism Removal                   :  Yes
+  Pessimism Removal Resolution               :  Nearest Common Node
+  Enable Input Delay Default Clock           :  No
+  Enable Preset / Clear Arcs                 :  No
+  Disable Flight Delays                      :  No
+  Ignore I/O Paths                           :  No
+  Timing Early Launch at Borrowing Latches   :  No
+  Borrow Time for Max Delay Exceptions       :  Yes
+  Merge Timing Exceptions                    :  Yes
+  Inter-SLR Compensation                     :  Conservative
+
+  Corner  Analyze    Analyze    
+  Name    Max Paths  Min Paths  
+  ------  ---------  ---------  
+  Slow    Yes        Yes        
+  Fast    Yes        Yes        
+
+
+------------------------------------------------------------------------------------------------
+| Report Methodology
+| ------------------
+------------------------------------------------------------------------------------------------
+
+Rule       Severity  Description                               Violations  
+---------  --------  ----------------------------------------  ----------  
+TIMING-15  Warning   Large hold violation                      33          
+XDCH-2     Warning   Same min and max delay values on IO port  98          
+
+Note: This report is based on the most recent report_methodology run and may not be up-to-date. Run report_methodology on the current design for the latest report.
+
+
+
+check_timing report
+
+Table of Contents
+-----------------
+1. checking no_clock (0)
+2. checking constant_clock (0)
+3. checking pulse_width_clock (0)
+4. checking unconstrained_internal_endpoints (0)
+5. checking no_input_delay (0)
+6. checking no_output_delay (0)
+7. checking multiple_clock (0)
+8. checking generated_clocks (0)
+9. checking loops (0)
+10. checking partial_input_delay (0)
+11. checking partial_output_delay (0)
+12. checking latch_loops (0)
+
+1. checking no_clock (0)
+------------------------
+ There are 0 register/latch pins with no clock.
+
+
+2. checking constant_clock (0)
+------------------------------
+ There are 0 register/latch pins with constant_clock.
+
+
+3. checking pulse_width_clock (0)
+---------------------------------
+ There are 0 register/latch pins which need pulse_width check
+
+
+4. checking unconstrained_internal_endpoints (0)
+------------------------------------------------
+ There are 0 pins that are not constrained for maximum delay.
+
+ There are 0 pins that are not constrained for maximum delay due to constant clock.
+
+
+5. checking no_input_delay (0)
+------------------------------
+ There are 0 input ports with no input delay specified.
+
+ There are 0 input ports with no input delay but user has a false path constraint.
+
+
+6. checking no_output_delay (0)
+-------------------------------
+ There are 0 ports with no output delay specified.
+
+ There are 0 ports with no output delay but user has a false path constraint
+
+ There are 0 ports with no output delay but with a timing clock defined on it or propagating through it
+
+
+7. checking multiple_clock (0)
+------------------------------
+ There are 0 register/latch pins with multiple clocks.
+
+
+8. checking generated_clocks (0)
+--------------------------------
+ There are 0 generated clocks that are not connected to a clock source.
+
+
+9. checking loops (0)
+---------------------
+ There are 0 combinational loops in the design.
+
+
+10. checking partial_input_delay (0)
+------------------------------------
+ There are 0 input ports with partial input delay specified.
+
+
+11. checking partial_output_delay (0)
+-------------------------------------
+ There are 0 ports with partial output delay specified.
+
+
+12. checking latch_loops (0)
+----------------------------
+ There are 0 combinational latch loops in the design through latch input
+
+
+
+------------------------------------------------------------------------------------------------
+| Design Timing Summary
+| ---------------------
+------------------------------------------------------------------------------------------------
+
+    WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
+    -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
+     -0.317       -0.346                      2                  129       -1.163      -36.059                     33                  129        3.225        0.000                       0                    65  
+
+
+Timing constraints are not met.
+
+
+------------------------------------------------------------------------------------------------
+| Clock Summary
+| -------------
+------------------------------------------------------------------------------------------------
+
+Clock  Waveform(ns)         Period(ns)      Frequency(MHz)
+-----  ------------         ----------      --------------
+clk    {0.000 3.500}        7.000           142.857         
+
+
+------------------------------------------------------------------------------------------------
+| Intra Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+Clock             WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
+-----             -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
+clk                -0.317       -0.346                      2                  129       -1.163      -36.059                     33                  129        3.225        0.000                       0                    65  
+
+
+------------------------------------------------------------------------------------------------
+| Inter Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+From Clock    To Clock          WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints  
+----------    --------          -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------  
+
+
+------------------------------------------------------------------------------------------------
+| Other Path Groups Table
+| -----------------------
+------------------------------------------------------------------------------------------------
+
+Path Group    From Clock    To Clock          WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints  
+----------    ----------    --------          -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------  
+
+
+------------------------------------------------------------------------------------------------
+| User Ignored Path Table
+| -----------------------
+------------------------------------------------------------------------------------------------
+
+Path Group    From Clock    To Clock    
+----------    ----------    --------    
+
+
+------------------------------------------------------------------------------------------------
+| Unconstrained Path Table
+| ------------------------
+------------------------------------------------------------------------------------------------
+
+Path Group    From Clock    To Clock    
+----------    ----------    --------    
+
+
+------------------------------------------------------------------------------------------------
+| Timing Details
+| --------------
+------------------------------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  clk
+  To Clock:  clk
+
+Setup :            2  Failing Endpoints,  Worst Slack       -0.317ns,  Total Violation       -0.346ns
+Hold  :           33  Failing Endpoints,  Worst Slack       -1.163ns,  Total Violation      -36.059ns
+PW    :            0  Failing Endpoints,  Worst Slack        3.225ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (VIOLATED) :        -0.317ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[29]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        8.214ns  (logic 1.948ns (23.716%)  route 6.266ns (76.285%))
+  Logic Levels:           18  (CARRY8=5 LUT3=1 LUT5=3 LUT6=9)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.405ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.405ns = ( 8.405 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_O[7])
+                                                      0.146     5.616 f  alu/adder/_inferred__5/i__carry__1/O[7]
+                         net (fo=26, routed)          0.687     6.303    alu/adder/pipeline/mant_sum[23]
+    SLICE_X23Y6          LUT6 (Prop_H6LUT_SLICEL_I2_O)
+                                                      0.116     6.419 r  alu/adder/pipeline/single_stage.data_out[25]_i_2/O
+                         net (fo=3, routed)           0.245     6.663    alu/adder/pipeline/single_stage.data_out[25]_i_2_n_0
+    SLICE_X23Y6          LUT6 (Prop_G6LUT_SLICEL_I0_O)
+                                                      0.114     6.777 r  alu/adder/pipeline/single_stage.data_out[27]_i_2__0/O
+                         net (fo=4, routed)           0.699     7.476    alu/adder/pipeline/single_stage.data_out[27]_i_2__0_n_0
+    SLICE_X24Y6          LUT6 (Prop_G6LUT_SLICEM_I3_O)
+                                                      0.039     7.515 r  alu/adder/pipeline/single_stage.data_out[29]_i_2/O
+                         net (fo=1, routed)           1.024     8.539    alu/adder/pipeline/single_stage.data_out[29]_i_2_n_0
+    SLICE_X24Y6          LUT6 (Prop_C6LUT_SLICEM_I5_O)
+                                                      0.098     8.637 r  alu/adder/pipeline/single_stage.data_out[29]_i_1/O
+                         net (fo=1, routed)           0.077     8.714    alu/adder/pipeline/sum_next[29]
+    SLICE_X24Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[29]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.405     8.405    alu/adder/pipeline/clk
+    SLICE_X24Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[29]/C
+                         clock pessimism              0.000     8.405    
+                         clock uncertainty           -0.035     8.370    
+    SLICE_X24Y6          FDRE (Setup_CFF_SLICEM_C_D)
+                                                      0.027     8.397    alu/adder/pipeline/single_stage.data_out_reg[29]
+  -------------------------------------------------------------------
+                         required time                          8.397    
+                         arrival time                          -8.714    
+  -------------------------------------------------------------------
+                         slack                                 -0.317    
+
+Slack (VIOLATED) :        -0.029ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[28]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.925ns  (logic 2.023ns (25.526%)  route 5.902ns (74.474%))
+  Logic Levels:           18  (CARRY8=5 LUT3=1 LUT5=4 LUT6=8)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.405ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.405ns = ( 8.405 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_O[7])
+                                                      0.146     5.616 f  alu/adder/_inferred__5/i__carry__1/O[7]
+                         net (fo=26, routed)          0.687     6.303    alu/adder/pipeline/mant_sum[23]
+    SLICE_X23Y6          LUT6 (Prop_H6LUT_SLICEL_I2_O)
+                                                      0.116     6.419 r  alu/adder/pipeline/single_stage.data_out[25]_i_2/O
+                         net (fo=3, routed)           0.245     6.663    alu/adder/pipeline/single_stage.data_out[25]_i_2_n_0
+    SLICE_X23Y6          LUT6 (Prop_G6LUT_SLICEL_I0_O)
+                                                      0.114     6.777 r  alu/adder/pipeline/single_stage.data_out[27]_i_2__0/O
+                         net (fo=4, routed)           0.501     7.278    alu/adder/pipeline/single_stage.data_out[27]_i_2__0_n_0
+    SLICE_X24Y6          LUT5 (Prop_F6LUT_SLICEM_I0_O)
+                                                      0.038     7.316 r  alu/adder/pipeline/single_stage.data_out[28]_i_2__0/O
+                         net (fo=1, routed)           0.853     8.169    alu/adder/pipeline/single_stage.data_out[28]_i_2__0_n_0
+    SLICE_X24Y6          LUT6 (Prop_D6LUT_SLICEM_I2_O)
+                                                      0.174     8.343 r  alu/adder/pipeline/single_stage.data_out[28]_i_1/O
+                         net (fo=1, routed)           0.082     8.425    alu/adder/pipeline/sum_next[28]
+    SLICE_X24Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[28]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.405     8.405    alu/adder/pipeline/clk
+    SLICE_X24Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[28]/C
+                         clock pessimism              0.000     8.405    
+                         clock uncertainty           -0.035     8.370    
+    SLICE_X24Y6          FDRE (Setup_DFF_SLICEM_C_D)
+                                                      0.027     8.397    alu/adder/pipeline/single_stage.data_out_reg[28]
+  -------------------------------------------------------------------
+                         required time                          8.397    
+                         arrival time                          -8.425    
+  -------------------------------------------------------------------
+                         slack                                 -0.029    
+
+Slack (MET) :             0.261ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[30]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.635ns  (logic 1.915ns (25.082%)  route 5.720ns (74.918%))
+  Logic Levels:           18  (CARRY8=5 LUT3=1 LUT5=4 LUT6=8)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.404ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.404ns = ( 8.404 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_O[7])
+                                                      0.146     5.616 f  alu/adder/_inferred__5/i__carry__1/O[7]
+                         net (fo=26, routed)          0.687     6.303    alu/adder/pipeline/mant_sum[23]
+    SLICE_X23Y6          LUT6 (Prop_H6LUT_SLICEL_I2_O)
+                                                      0.116     6.419 r  alu/adder/pipeline/single_stage.data_out[25]_i_2/O
+                         net (fo=3, routed)           0.245     6.663    alu/adder/pipeline/single_stage.data_out[25]_i_2_n_0
+    SLICE_X23Y6          LUT6 (Prop_G6LUT_SLICEL_I0_O)
+                                                      0.114     6.777 r  alu/adder/pipeline/single_stage.data_out[27]_i_2__0/O
+                         net (fo=4, routed)           0.702     7.479    alu/adder/pipeline/single_stage.data_out[27]_i_2__0_n_0
+    SLICE_X24Y7          LUT5 (Prop_H6LUT_SLICEM_I1_O)
+                                                      0.066     7.545 r  alu/adder/pipeline/single_stage.data_out[30]_i_2/O
+                         net (fo=1, routed)           0.470     8.015    alu/adder/pipeline/single_stage.data_out[30]_i_2_n_0
+    SLICE_X24Y7          LUT6 (Prop_D6LUT_SLICEM_I5_O)
+                                                      0.038     8.053 r  alu/adder/pipeline/single_stage.data_out[30]_i_1/O
+                         net (fo=1, routed)           0.082     8.135    alu/adder/pipeline/sum_next[30]
+    SLICE_X24Y7          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[30]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.404     8.404    alu/adder/pipeline/clk
+    SLICE_X24Y7          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[30]/C
+                         clock pessimism              0.000     8.404    
+                         clock uncertainty           -0.035     8.369    
+    SLICE_X24Y7          FDRE (Setup_DFF_SLICEM_C_D)
+                                                      0.027     8.396    alu/adder/pipeline/single_stage.data_out_reg[30]
+  -------------------------------------------------------------------
+                         required time                          8.396    
+                         arrival time                          -8.135    
+  -------------------------------------------------------------------
+                         slack                                  0.261    
+
+Slack (MET) :             0.263ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[26]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.626ns  (logic 1.910ns (25.045%)  route 5.716ns (74.955%))
+  Logic Levels:           17  (CARRY8=5 LUT3=1 LUT5=4 LUT6=7)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.398ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.398ns = ( 8.398 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_O[7])
+                                                      0.146     5.616 f  alu/adder/_inferred__5/i__carry__1/O[7]
+                         net (fo=26, routed)          0.687     6.303    alu/adder/pipeline/mant_sum[23]
+    SLICE_X23Y6          LUT6 (Prop_H6LUT_SLICEL_I2_O)
+                                                      0.116     6.419 r  alu/adder/pipeline/single_stage.data_out[25]_i_2/O
+                         net (fo=3, routed)           0.590     7.008    alu/adder/pipeline/single_stage.data_out[25]_i_2_n_0
+    SLICE_X23Y5          LUT5 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.039     7.047 r  alu/adder/pipeline/single_stage.data_out[26]_i_2__0/O
+                         net (fo=1, routed)           0.846     7.893    alu/adder/pipeline/single_stage.data_out[26]_i_2__0_n_0
+    SLICE_X23Y5          LUT6 (Prop_C6LUT_SLICEL_I5_O)
+                                                      0.174     8.067 r  alu/adder/pipeline/single_stage.data_out[26]_i_1/O
+                         net (fo=1, routed)           0.059     8.126    alu/adder/pipeline/sum_next[26]
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[26]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.398     8.398    alu/adder/pipeline/clk
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[26]/C
+                         clock pessimism              0.000     8.398    
+                         clock uncertainty           -0.035     8.363    
+    SLICE_X23Y5          FDRE (Setup_CFF_SLICEL_C_D)
+                                                      0.027     8.390    alu/adder/pipeline/single_stage.data_out_reg[26]
+  -------------------------------------------------------------------
+                         required time                          8.390    
+                         arrival time                          -8.126    
+  -------------------------------------------------------------------
+                         slack                                  0.263    
+
+Slack (MET) :             0.395ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[27]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.495ns  (logic 1.875ns (25.017%)  route 5.620ns (74.983%))
+  Logic Levels:           17  (CARRY8=5 LUT3=1 LUT5=3 LUT6=8)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.398ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.398ns = ( 8.398 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_O[7])
+                                                      0.146     5.616 f  alu/adder/_inferred__5/i__carry__1/O[7]
+                         net (fo=26, routed)          0.687     6.303    alu/adder/pipeline/mant_sum[23]
+    SLICE_X23Y6          LUT6 (Prop_H6LUT_SLICEL_I2_O)
+                                                      0.116     6.419 r  alu/adder/pipeline/single_stage.data_out[25]_i_2/O
+                         net (fo=3, routed)           0.245     6.663    alu/adder/pipeline/single_stage.data_out[25]_i_2_n_0
+    SLICE_X23Y6          LUT6 (Prop_G6LUT_SLICEL_I0_O)
+                                                      0.114     6.777 r  alu/adder/pipeline/single_stage.data_out[27]_i_2__0/O
+                         net (fo=4, routed)           1.096     7.873    alu/adder/pipeline/single_stage.data_out[27]_i_2__0_n_0
+    SLICE_X23Y5          LUT6 (Prop_B6LUT_SLICEL_I2_O)
+                                                      0.064     7.937 r  alu/adder/pipeline/single_stage.data_out[27]_i_1/O
+                         net (fo=1, routed)           0.058     7.995    alu/adder/pipeline/sum_next[27]
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[27]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.398     8.398    alu/adder/pipeline/clk
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[27]/C
+                         clock pessimism              0.000     8.398    
+                         clock uncertainty           -0.035     8.363    
+    SLICE_X23Y5          FDRE (Setup_BFF_SLICEL_C_D)
+                                                      0.027     8.390    alu/adder/pipeline/single_stage.data_out_reg[27]
+  -------------------------------------------------------------------
+                         required time                          8.390    
+                         arrival time                          -7.995    
+  -------------------------------------------------------------------
+                         slack                                  0.395    
+
+Slack (MET) :             0.515ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[20]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.372ns  (logic 1.766ns (23.954%)  route 5.606ns (76.046%))
+  Logic Levels:           17  (CARRY8=6 LUT3=1 LUT5=5 LUT6=5)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.396ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.396ns = ( 8.396 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.493 r  alu/adder/_inferred__5/i__carry__1/CO[7]
+                         net (fo=1, routed)           0.028     5.521    alu/adder/_inferred__5/i__carry__1_n_0
+    SLICE_X26Y14         CARRY8 (Prop_CARRY8_SLICEL_CI_O[0])
+                                                      0.072     5.593 r  alu/adder/_inferred__5/i__carry__2/O[0]
+                         net (fo=31, routed)          1.488     7.081    alu/adder/pipeline/mant_sum[24]
+    SLICE_X26Y7          LUT5 (Prop_B5LUT_SLICEL_I1_O)
+                                                      0.173     7.254 r  alu/adder/pipeline/single_stage.data_out[20]_i_2/O
+                         net (fo=1, routed)           0.497     7.751    alu/adder/pipeline/single_stage.data_out[20]_i_2_n_0
+    SLICE_X26Y4          LUT5 (Prop_D6LUT_SLICEL_I4_O)
+                                                      0.063     7.814 r  alu/adder/pipeline/single_stage.data_out[20]_i_1/O
+                         net (fo=1, routed)           0.058     7.872    alu/adder/pipeline/sum_next[20]
+    SLICE_X26Y4          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[20]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.396     8.396    alu/adder/pipeline/clk
+    SLICE_X26Y4          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[20]/C
+                         clock pessimism              0.000     8.396    
+                         clock uncertainty           -0.035     8.361    
+    SLICE_X26Y4          FDRE (Setup_DFF_SLICEL_C_D)
+                                                      0.027     8.388    alu/adder/pipeline/single_stage.data_out_reg[20]
+  -------------------------------------------------------------------
+                         required time                          8.388    
+                         arrival time                          -7.872    
+  -------------------------------------------------------------------
+                         slack                                  0.515    
+
+Slack (MET) :             0.568ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[21]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.319ns  (logic 1.763ns (24.087%)  route 5.556ns (75.913%))
+  Logic Levels:           17  (CARRY8=6 LUT3=1 LUT5=5 LUT6=5)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.396ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.396ns = ( 8.396 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.493 r  alu/adder/_inferred__5/i__carry__1/CO[7]
+                         net (fo=1, routed)           0.028     5.521    alu/adder/_inferred__5/i__carry__1_n_0
+    SLICE_X26Y14         CARRY8 (Prop_CARRY8_SLICEL_CI_O[0])
+                                                      0.072     5.593 r  alu/adder/_inferred__5/i__carry__2/O[0]
+                         net (fo=31, routed)          1.476     7.069    alu/adder/pipeline/mant_sum[24]
+    SLICE_X26Y7          LUT5 (Prop_C5LUT_SLICEL_I1_O)
+                                                      0.195     7.264 r  alu/adder/pipeline/single_stage.data_out[21]_i_2/O
+                         net (fo=1, routed)           0.458     7.722    alu/adder/pipeline/single_stage.data_out[21]_i_2_n_0
+    SLICE_X26Y4          LUT5 (Prop_C6LUT_SLICEL_I4_O)
+                                                      0.038     7.760 r  alu/adder/pipeline/single_stage.data_out[21]_i_1/O
+                         net (fo=1, routed)           0.059     7.819    alu/adder/pipeline/sum_next[21]
+    SLICE_X26Y4          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[21]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.396     8.396    alu/adder/pipeline/clk
+    SLICE_X26Y4          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[21]/C
+                         clock pessimism              0.000     8.396    
+                         clock uncertainty           -0.035     8.361    
+    SLICE_X26Y4          FDRE (Setup_CFF_SLICEL_C_D)
+                                                      0.027     8.388    alu/adder/pipeline/single_stage.data_out_reg[21]
+  -------------------------------------------------------------------
+                         required time                          8.388    
+                         arrival time                          -7.819    
+  -------------------------------------------------------------------
+                         slack                                  0.568    
+
+Slack (MET) :             0.590ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[8]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.298ns  (logic 1.632ns (22.363%)  route 5.666ns (77.637%))
+  Logic Levels:           17  (CARRY8=6 LUT3=1 LUT5=5 LUT6=5)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.396ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.396ns = ( 8.396 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.493 r  alu/adder/_inferred__5/i__carry__1/CO[7]
+                         net (fo=1, routed)           0.028     5.521    alu/adder/_inferred__5/i__carry__1_n_0
+    SLICE_X26Y14         CARRY8 (Prop_CARRY8_SLICEL_CI_O[0])
+                                                      0.072     5.593 r  alu/adder/_inferred__5/i__carry__2/O[0]
+                         net (fo=31, routed)          1.734     7.327    alu/adder/pipeline/mant_sum[24]
+    SLICE_X26Y6          LUT5 (Prop_E6LUT_SLICEL_I1_O)
+                                                      0.039     7.366 r  alu/adder/pipeline/single_stage.data_out[8]_i_2/O
+                         net (fo=1, routed)           0.310     7.676    alu/adder/pipeline/single_stage.data_out[8]_i_2_n_0
+    SLICE_X26Y6          LUT5 (Prop_C6LUT_SLICEL_I4_O)
+                                                      0.063     7.739 r  alu/adder/pipeline/single_stage.data_out[8]_i_1/O
+                         net (fo=1, routed)           0.059     7.798    alu/adder/pipeline/sum_next[8]
+    SLICE_X26Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[8]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.396     8.396    alu/adder/pipeline/clk
+    SLICE_X26Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[8]/C
+                         clock pessimism              0.000     8.396    
+                         clock uncertainty           -0.035     8.361    
+    SLICE_X26Y6          FDRE (Setup_CFF_SLICEL_C_D)
+                                                      0.027     8.388    alu/adder/pipeline/single_stage.data_out_reg[8]
+  -------------------------------------------------------------------
+                         required time                          8.388    
+                         arrival time                          -7.798    
+  -------------------------------------------------------------------
+                         slack                                  0.590    
+
+Slack (MET) :             0.602ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[0]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.285ns  (logic 1.673ns (22.964%)  route 5.612ns (77.036%))
+  Logic Levels:           17  (CARRY8=6 LUT3=1 LUT4=1 LUT5=4 LUT6=5)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.396ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.396ns = ( 8.396 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.493 r  alu/adder/_inferred__5/i__carry__1/CO[7]
+                         net (fo=1, routed)           0.028     5.521    alu/adder/_inferred__5/i__carry__1_n_0
+    SLICE_X26Y14         CARRY8 (Prop_CARRY8_SLICEL_CI_O[0])
+                                                      0.072     5.593 r  alu/adder/_inferred__5/i__carry__2/O[0]
+                         net (fo=31, routed)          1.421     7.014    alu/adder/pipeline/mant_sum[24]
+    SLICE_X26Y10         LUT4 (Prop_D6LUT_SLICEL_I1_O)
+                                                      0.063     7.077 r  alu/adder/pipeline/single_stage.data_out[0]_i_2/O
+                         net (fo=1, routed)           0.606     7.683    alu/adder/pipeline/single_stage.data_out[0]_i_2_n_0
+    SLICE_X27Y3          LUT5 (Prop_D5LUT_SLICEL_I4_O)
+                                                      0.080     7.763 r  alu/adder/pipeline/single_stage.data_out[0]_i_1/O
+                         net (fo=1, routed)           0.022     7.785    alu/adder/pipeline/sum_next[0]
+    SLICE_X27Y3          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[0]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.396     8.396    alu/adder/pipeline/clk
+    SLICE_X27Y3          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[0]/C
+                         clock pessimism              0.000     8.396    
+                         clock uncertainty           -0.035     8.361    
+    SLICE_X27Y3          FDRE (Setup_DFF2_SLICEL_C_D)
+                                                      0.027     8.388    alu/adder/pipeline/single_stage.data_out_reg[0]
+  -------------------------------------------------------------------
+                         required time                          8.388    
+                         arrival time                          -7.785    
+  -------------------------------------------------------------------
+                         slack                                  0.602    
+
+Slack (MET) :             0.644ns  (required time - arrival time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[19]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        7.245ns  (logic 1.670ns (23.049%)  route 5.575ns (76.951%))
+  Logic Levels:           17  (CARRY8=6 LUT3=1 LUT5=5 LUT6=5)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.398ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.398ns = ( 8.398 - 7.000 ) 
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/a[23]
+    SLICE_X22Y14         LUT6 (Prop_F6LUT_SLICEL_I0_O)
+                                                      0.177     0.677 r  alu/adder/i__carry_i_136/O
+                         net (fo=3, routed)           0.270     0.947    alu/adder/i__carry_i_136_n_0
+    SLICE_X22Y14         LUT5 (Prop_D6LUT_SLICEL_I0_O)
+                                                      0.174     1.121 r  alu/adder/i__carry_i_183/O
+                         net (fo=1, routed)           0.104     1.225    alu/adder/i__carry_i_183_n_0
+    SLICE_X22Y14         LUT6 (Prop_G6LUT_SLICEL_I3_O)
+                                                      0.114     1.339 f  alu/adder/i__carry_i_135/O
+                         net (fo=39, routed)          0.504     1.843    alu/adder/i__carry_i_135_n_0
+    SLICE_X25Y13         LUT5 (Prop_E6LUT_SLICEL_I3_O)
+                                                      0.064     1.907 f  alu/adder/i__carry_i_140/O
+                         net (fo=6, routed)           0.408     2.315    alu/adder/i__carry_i_140_n_0
+    SLICE_X24Y13         LUT6 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.039     2.354 f  alu/adder/i__carry_i_87/O
+                         net (fo=4, routed)           0.300     2.655    alu/adder/i__carry_i_87_n_0
+    SLICE_X23Y13         LUT6 (Prop_H6LUT_SLICEL_I1_O)
+                                                      0.100     2.755 r  alu/adder/i__carry_i_30/O
+                         net (fo=4, routed)           0.685     3.439    alu/adder/i__carry_i_30_n_0
+    SLICE_X27Y12         LUT6 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.148     3.587 r  alu/adder/i__carry_i_12/O
+                         net (fo=1, routed)           0.008     3.595    alu/adder/i__carry_i_12_n_0
+    SLICE_X27Y12         CARRY8 (Prop_CARRY8_SLICEL_S[4]_CO[7])
+                                                      0.195     3.790 r  alu/adder/result_sign1_inferred__0/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     3.818    alu/adder/result_sign1_inferred__0/i__carry_n_0
+    SLICE_X27Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[4])
+                                                      0.116     3.934 r  alu/adder/result_sign1_inferred__0/i__carry__0/CO[4]
+                         net (fo=23, routed)          0.304     4.239    alu/adder/result_sign1
+    SLICE_X25Y12         LUT3 (Prop_D5LUT_SLICEL_I2_O)
+                                                      0.080     4.319 r  alu/adder/i__carry_i_17/O
+                         net (fo=3, routed)           0.436     4.755    alu/adder/i__carry_i_17_n_0
+    SLICE_X27Y11         LUT5 (Prop_F6LUT_SLICEL_I1_O)
+                                                      0.039     4.794 r  alu/adder/i__carry_i_8__0/O
+                         net (fo=1, routed)           0.431     5.225    alu/adder/i__carry_i_8__0_n_0
+    SLICE_X26Y11         CARRY8 (Prop_CARRY8_SLICEL_DI[0]_CO[7])
+                                                      0.166     5.391 r  alu/adder/_inferred__5/i__carry/CO[7]
+                         net (fo=1, routed)           0.028     5.419    alu/adder/_inferred__5/i__carry_n_0
+    SLICE_X26Y12         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.442 r  alu/adder/_inferred__5/i__carry__0/CO[7]
+                         net (fo=1, routed)           0.028     5.470    alu/adder/_inferred__5/i__carry__0_n_0
+    SLICE_X26Y13         CARRY8 (Prop_CARRY8_SLICEL_CI_CO[7])
+                                                      0.023     5.493 r  alu/adder/_inferred__5/i__carry__1/CO[7]
+                         net (fo=1, routed)           0.028     5.521    alu/adder/_inferred__5/i__carry__1_n_0
+    SLICE_X26Y14         CARRY8 (Prop_CARRY8_SLICEL_CI_O[0])
+                                                      0.072     5.593 r  alu/adder/_inferred__5/i__carry__2/O[0]
+                         net (fo=31, routed)          1.604     7.197    alu/adder/pipeline/mant_sum[24]
+    SLICE_X26Y9          LUT5 (Prop_B6LUT_SLICEL_I1_O)
+                                                      0.100     7.297 r  alu/adder/pipeline/single_stage.data_out[19]_i_2/O
+                         net (fo=1, routed)           0.348     7.645    alu/adder/pipeline/single_stage.data_out[19]_i_2_n_0
+    SLICE_X26Y9          LUT5 (Prop_H6LUT_SLICEL_I4_O)
+                                                      0.040     7.685 r  alu/adder/pipeline/single_stage.data_out[19]_i_1/O
+                         net (fo=1, routed)           0.060     7.745    alu/adder/pipeline/sum_next[19]
+    SLICE_X26Y9          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[19]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                                                      0.000     7.000 r  clk (IN)
+                         net (fo=64, unset)           1.398     8.398    alu/adder/pipeline/clk
+    SLICE_X26Y9          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[19]/C
+                         clock pessimism              0.000     8.398    
+                         clock uncertainty           -0.035     8.363    
+    SLICE_X26Y9          FDRE (Setup_HFF_SLICEL_C_D)
+                                                      0.027     8.390    alu/adder/pipeline/single_stage.data_out_reg[19]
+  -------------------------------------------------------------------
+                         required time                          8.390    
+                         arrival time                          -7.745    
+  -------------------------------------------------------------------
+                         slack                                  0.644    
+
+
+
+
+
+Min Delay Paths
+--------------------------------------------------------------------------------------
+Slack (VIOLATED) :        -1.163ns  (arrival time - required time)
+  Source:                 op
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/shift_op/single_stage.data_out_reg[0]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.016ns  (logic 0.000ns (0.000%)  route 0.016ns (100.000%))
+  Logic Levels:           0  
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.626ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.626ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  op (IN)
+                         net (fo=0)                   0.016     0.516    alu/shift_op/op
+    SLICE_X23Y5          FDRE                                         r  alu/shift_op/single_stage.data_out_reg[0]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.626     1.626    alu/shift_op/clk
+    SLICE_X23Y5          FDRE                                         r  alu/shift_op/single_stage.data_out_reg[0]/C
+                         clock pessimism              0.000     1.626    
+    SLICE_X23Y5          FDRE (Hold_AFF_SLICEL_C_D)
+                                                      0.053     1.679    alu/shift_op/single_stage.data_out_reg[0]
+  -------------------------------------------------------------------
+                         required time                         -1.679    
+                         arrival time                           0.516    
+  -------------------------------------------------------------------
+                         slack                                 -1.163    
+
+Slack (VIOLATED) :        -1.127ns  (arrival time - required time)
+  Source:                 a[25]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[25]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.052ns  (logic 0.027ns (51.923%)  route 0.025ns (48.077%))
+  Logic Levels:           1  (LUT6=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.626ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.626ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[25] (IN)
+                         net (fo=14, unset)           0.000     0.500    alu/adder/pipeline/a[25]
+    SLICE_X23Y5          LUT6 (Prop_D6LUT_SLICEL_I5_O)
+                                                      0.027     0.527 r  alu/adder/pipeline/single_stage.data_out[25]_i_1/O
+                         net (fo=1, routed)           0.025     0.552    alu/adder/pipeline/sum_next[25]
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[25]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.626     1.626    alu/adder/pipeline/clk
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[25]/C
+                         clock pessimism              0.000     1.626    
+    SLICE_X23Y5          FDRE (Hold_DFF_SLICEL_C_D)
+                                                      0.053     1.679    alu/adder/pipeline/single_stage.data_out_reg[25]
+  -------------------------------------------------------------------
+                         required time                         -1.679    
+                         arrival time                           0.552    
+  -------------------------------------------------------------------
+                         slack                                 -1.127    
+
+Slack (VIOLATED) :        -1.126ns  (arrival time - required time)
+  Source:                 a[27]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[27]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.053ns  (logic 0.028ns (52.830%)  route 0.025ns (47.170%))
+  Logic Levels:           1  (LUT6=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.626ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.626ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[27] (IN)
+                         net (fo=12, unset)           0.000     0.500    alu/adder/pipeline/a[27]
+    SLICE_X23Y5          LUT6 (Prop_B6LUT_SLICEL_I5_O)
+                                                      0.028     0.528 r  alu/adder/pipeline/single_stage.data_out[27]_i_1/O
+                         net (fo=1, routed)           0.025     0.553    alu/adder/pipeline/sum_next[27]
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[27]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.626     1.626    alu/adder/pipeline/clk
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[27]/C
+                         clock pessimism              0.000     1.626    
+    SLICE_X23Y5          FDRE (Hold_BFF_SLICEL_C_D)
+                                                      0.053     1.679    alu/adder/pipeline/single_stage.data_out_reg[27]
+  -------------------------------------------------------------------
+                         required time                         -1.679    
+                         arrival time                           0.553    
+  -------------------------------------------------------------------
+                         slack                                 -1.126    
+
+Slack (VIOLATED) :        -1.126ns  (arrival time - required time)
+  Source:                 b[31]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[31]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.061ns  (logic 0.027ns (44.262%)  route 0.034ns (55.738%))
+  Logic Levels:           1  (LUT5=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.634ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.634ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  b[31] (IN)
+                         net (fo=48, unset)           0.000     0.500    alu/adder/pipeline/b[31]
+    SLICE_X24Y7          LUT5 (Prop_B6LUT_SLICEM_I4_O)
+                                                      0.027     0.527 r  alu/adder/pipeline/single_stage.data_out[31]_i_1/O
+                         net (fo=1, routed)           0.034     0.561    alu/adder/pipeline/sum_next[31]
+    SLICE_X24Y7          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[31]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.634     1.634    alu/adder/pipeline/clk
+    SLICE_X24Y7          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[31]/C
+                         clock pessimism              0.000     1.634    
+    SLICE_X24Y7          FDRE (Hold_BFF_SLICEM_C_D)
+                                                      0.053     1.687    alu/adder/pipeline/single_stage.data_out_reg[31]
+  -------------------------------------------------------------------
+                         required time                         -1.687    
+                         arrival time                           0.561    
+  -------------------------------------------------------------------
+                         slack                                 -1.126    
+
+Slack (VIOLATED) :        -1.121ns  (arrival time - required time)
+  Source:                 a[28]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[28]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.067ns  (logic 0.027ns (40.298%)  route 0.040ns (59.701%))
+  Logic Levels:           1  (LUT6=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.635ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.635ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[28] (IN)
+                         net (fo=10, unset)           0.000     0.500    alu/adder/pipeline/a[28]
+    SLICE_X24Y6          LUT6 (Prop_D6LUT_SLICEM_I5_O)
+                                                      0.027     0.527 r  alu/adder/pipeline/single_stage.data_out[28]_i_1/O
+                         net (fo=1, routed)           0.040     0.567    alu/adder/pipeline/sum_next[28]
+    SLICE_X24Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[28]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.635     1.635    alu/adder/pipeline/clk
+    SLICE_X24Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[28]/C
+                         clock pessimism              0.000     1.635    
+    SLICE_X24Y6          FDRE (Hold_DFF_SLICEM_C_D)
+                                                      0.053     1.688    alu/adder/pipeline/single_stage.data_out_reg[28]
+  -------------------------------------------------------------------
+                         required time                         -1.688    
+                         arrival time                           0.567    
+  -------------------------------------------------------------------
+                         slack                                 -1.121    
+
+Slack (VIOLATED) :        -1.111ns  (arrival time - required time)
+  Source:                 a[24]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[24]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.068ns  (logic 0.043ns (63.235%)  route 0.025ns (36.765%))
+  Logic Levels:           1  (LUT6=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.626ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.626ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[24] (IN)
+                         net (fo=18, unset)           0.000     0.500    alu/adder/pipeline/a[24]
+    SLICE_X23Y6          LUT6 (Prop_D6LUT_SLICEL_I4_O)
+                                                      0.043     0.543 r  alu/adder/pipeline/single_stage.data_out[24]_i_1/O
+                         net (fo=1, routed)           0.025     0.568    alu/adder/pipeline/sum_next[24]
+    SLICE_X23Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[24]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.626     1.626    alu/adder/pipeline/clk
+    SLICE_X23Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[24]/C
+                         clock pessimism              0.000     1.626    
+    SLICE_X23Y6          FDRE (Hold_DFF_SLICEL_C_D)
+                                                      0.053     1.679    alu/adder/pipeline/single_stage.data_out_reg[24]
+  -------------------------------------------------------------------
+                         required time                         -1.679    
+                         arrival time                           0.568    
+  -------------------------------------------------------------------
+                         slack                                 -1.111    
+
+Slack (VIOLATED) :        -1.108ns  (arrival time - required time)
+  Source:                 a[26]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[26]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.071ns  (logic 0.043ns (60.563%)  route 0.028ns (39.437%))
+  Logic Levels:           1  (LUT6=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.626ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.626ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[26] (IN)
+                         net (fo=12, unset)           0.000     0.500    alu/adder/pipeline/a[26]
+    SLICE_X23Y5          LUT6 (Prop_C6LUT_SLICEL_I4_O)
+                                                      0.043     0.543 r  alu/adder/pipeline/single_stage.data_out[26]_i_1/O
+                         net (fo=1, routed)           0.028     0.571    alu/adder/pipeline/sum_next[26]
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[26]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.626     1.626    alu/adder/pipeline/clk
+    SLICE_X23Y5          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[26]/C
+                         clock pessimism              0.000     1.626    
+    SLICE_X23Y5          FDRE (Hold_CFF_SLICEL_C_D)
+                                                      0.053     1.679    alu/adder/pipeline/single_stage.data_out_reg[26]
+  -------------------------------------------------------------------
+                         required time                         -1.679    
+                         arrival time                           0.571    
+  -------------------------------------------------------------------
+                         slack                                 -1.108    
+
+Slack (VIOLATED) :        -1.107ns  (arrival time - required time)
+  Source:                 a[23]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[23]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.068ns  (logic 0.043ns (63.235%)  route 0.025ns (36.765%))
+  Logic Levels:           1  (LUT6=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.622ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.622ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[23] (IN)
+                         net (fo=40, unset)           0.000     0.500    alu/adder/pipeline/a[23]
+    SLICE_X26Y7          LUT6 (Prop_A6LUT_SLICEL_I4_O)
+                                                      0.043     0.543 r  alu/adder/pipeline/single_stage.data_out[23]_i_1/O
+                         net (fo=1, routed)           0.025     0.568    alu/adder/pipeline/sum_next[23]
+    SLICE_X26Y7          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[23]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.622     1.622    alu/adder/pipeline/clk
+    SLICE_X26Y7          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[23]/C
+                         clock pessimism              0.000     1.622    
+    SLICE_X26Y7          FDRE (Hold_AFF_SLICEL_C_D)
+                                                      0.053     1.675    alu/adder/pipeline/single_stage.data_out_reg[23]
+  -------------------------------------------------------------------
+                         required time                         -1.675    
+                         arrival time                           0.568    
+  -------------------------------------------------------------------
+                         slack                                 -1.107    
+
+Slack (VIOLATED) :        -1.106ns  (arrival time - required time)
+  Source:                 a[29]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[29]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.082ns  (logic 0.043ns (52.439%)  route 0.039ns (47.561%))
+  Logic Levels:           1  (LUT6=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.635ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.635ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[29] (IN)
+                         net (fo=9, unset)            0.000     0.500    alu/adder/pipeline/a[29]
+    SLICE_X24Y6          LUT6 (Prop_C6LUT_SLICEM_I4_O)
+                                                      0.043     0.543 r  alu/adder/pipeline/single_stage.data_out[29]_i_1/O
+                         net (fo=1, routed)           0.039     0.582    alu/adder/pipeline/sum_next[29]
+    SLICE_X24Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[29]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.635     1.635    alu/adder/pipeline/clk
+    SLICE_X24Y6          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[29]/C
+                         clock pessimism              0.000     1.635    
+    SLICE_X24Y6          FDRE (Hold_CFF_SLICEM_C_D)
+                                                      0.053     1.688    alu/adder/pipeline/single_stage.data_out_reg[29]
+  -------------------------------------------------------------------
+                         required time                         -1.688    
+                         arrival time                           0.582    
+  -------------------------------------------------------------------
+                         slack                                 -1.106    
+
+Slack (VIOLATED) :        -1.104ns  (arrival time - required time)
+  Source:                 a[30]
+                            (input port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            alu/adder/pipeline/single_stage.data_out_reg[30]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Hold (Min at Slow Process Corner)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.083ns  (logic 0.043ns (51.807%)  route 0.040ns (48.193%))
+  Logic Levels:           1  (LUT6=1)
+  Input Delay:            0.500ns
+  Clock Path Skew:        1.634ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    1.634ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                         input delay                  0.500     0.500    
+                                                      0.000     0.500 r  a[30] (IN)
+                         net (fo=7, unset)            0.000     0.500    alu/adder/pipeline/a[30]
+    SLICE_X24Y7          LUT6 (Prop_D6LUT_SLICEM_I4_O)
+                                                      0.043     0.543 r  alu/adder/pipeline/single_stage.data_out[30]_i_1/O
+                         net (fo=1, routed)           0.040     0.583    alu/adder/pipeline/sum_next[30]
+    SLICE_X24Y7          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[30]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=64, unset)           1.634     1.634    alu/adder/pipeline/clk
+    SLICE_X24Y7          FDRE                                         r  alu/adder/pipeline/single_stage.data_out_reg[30]/C
+                         clock pessimism              0.000     1.634    
+    SLICE_X24Y7          FDRE (Hold_DFF_SLICEM_C_D)
+                                                      0.053     1.687    alu/adder/pipeline/single_stage.data_out_reg[30]
+  -------------------------------------------------------------------
+                         required time                         -1.687    
+                         arrival time                           0.583    
+  -------------------------------------------------------------------
+                         slack                                 -1.104    
+
+
+
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         clk
+Waveform(ns):       { 0.000 3.500 }
+Period(ns):         7.000
+Sources:            { clk }
+
+Check Type        Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location     Pin
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X27Y3  alu/adder/pipeline/single_stage.data_out_reg[0]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[10]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[11]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[12]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[13]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X25Y5  alu/adder/pipeline/single_stage.data_out_reg[14]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X25Y5  alu/adder/pipeline/single_stage.data_out_reg[15]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X26Y3  alu/adder/pipeline/single_stage.data_out_reg[16]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X26Y3  alu/adder/pipeline/single_stage.data_out_reg[17]/C
+Min Period        n/a     FDRE/C   n/a            0.550         7.000       6.450      SLICE_X25Y8  alu/adder/pipeline/single_stage.data_out_reg[18]/C
+Low Pulse Width   Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y3  alu/adder/pipeline/single_stage.data_out_reg[0]/C
+Low Pulse Width   Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y3  alu/adder/pipeline/single_stage.data_out_reg[0]/C
+Low Pulse Width   Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[10]/C
+Low Pulse Width   Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[10]/C
+Low Pulse Width   Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[11]/C
+Low Pulse Width   Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[11]/C
+Low Pulse Width   Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[12]/C
+Low Pulse Width   Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[12]/C
+Low Pulse Width   Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[13]/C
+Low Pulse Width   Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[13]/C
+High Pulse Width  Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y3  alu/adder/pipeline/single_stage.data_out_reg[0]/C
+High Pulse Width  Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y3  alu/adder/pipeline/single_stage.data_out_reg[0]/C
+High Pulse Width  Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[10]/C
+High Pulse Width  Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[10]/C
+High Pulse Width  Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[11]/C
+High Pulse Width  Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y5  alu/adder/pipeline/single_stage.data_out_reg[11]/C
+High Pulse Width  Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[12]/C
+High Pulse Width  Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[12]/C
+High Pulse Width  Slow    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[13]/C
+High Pulse Width  Fast    FDRE/C   n/a            0.275         3.500       3.225      SLICE_X27Y4  alu/adder/pipeline/single_stage.data_out_reg[13]/C
+
+
+

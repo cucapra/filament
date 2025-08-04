@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(verilator:*)",
+      "Bash(make test:*)",
+      "Bash(iverilog:*)",
+      "Bash(./debug_li)",
+      "Bash(./debug_detailed)",
+      "Bash(./debug_dynamic_simple)",
+      "Bash(./debug_test)",
+      "Bash(./debug_bp)",
+      "Bash(make:*)",
+      "Bash(ls:*)"
+    ],
+    "deny": []
+  }
+}

@@ -1,0 +1,124 @@
+// Latency-Insensitive wrapper for floating point multiplier with ready-valid interface
+module FP_Mult_LI_Wrapper #(
+    parameter STAGES = 1  // 1, 2, 3, or 4 stages
+) (
+    input clk,
+    input reset,
+    
+    // Input interface
+    input [31:0] a,
+    input [31:0] b,
+    input valid_in,
+    output ready_out,
+    
+    // Output interface  
+    output [31:0] result,
+    output exception,
+    output overflow,
+    output underflow,
+    output valid_out,
+    input ready_in
+);
+
+// Internal FIFO to buffer inputs and track pipeline
+localparam FIFO_SIZE = (STAGES < 2) ? 4 : (2*STAGES);
+reg [63:0] input_fifo [0:FIFO_SIZE-1];   // Store {a, b}
+reg [STAGES:0] valid_shift;              // Track valid data through pipeline
+reg [3:0] fifo_head, fifo_tail;
+reg [3:0] fifo_count;
+
+// Core multiplier signals
+reg [31:0] core_a, core_b;
+wire [31:0] core_result;
+wire core_exception, core_overflow, core_underflow;
+
+// Output registers for flags
+reg out_exception, out_overflow, out_underflow;
+
+// Output valid persistence
+reg output_valid_reg;
+wire transaction_complete = output_valid_reg && ready_in;
+
+// Stall logic with proper backpressure
+wire output_stalled = output_valid_reg && !ready_in;
+wire pipeline_advance = !output_stalled;
+wire input_ready = (fifo_count < FIFO_SIZE) && !output_stalled && !reset;
+
+assign ready_out = input_ready;
+assign valid_out = output_valid_reg;
+assign result = core_result;
+assign exception = out_exception;
+assign overflow = out_overflow;
+assign underflow = out_underflow;
+
+integer i;
+
+// Instantiate the core multiplier
+FP_Mult_Wrapper #(.STAGES(STAGES)) core_multiplier (
+    .clk(clk),
+    .reset(reset),
+    .a(core_a),
+    .b(core_b),
+    .result(core_result),
+    .exception(core_exception),
+    .overflow(core_overflow),
+    .underflow(core_underflow)
+);
+
+always @(posedge clk) begin
+    if (reset) begin
+        fifo_head <= 0;
+        fifo_tail <= 0;
+        fifo_count <= 0;
+        valid_shift <= 0;
+        output_valid_reg <= 0;
+        core_a <= 0;
+        core_b <= 0;
+        out_exception <= 0;
+        out_overflow <= 0;
+        out_underflow <= 0;
+        
+        // Clear FIFO
+        for (i = 0; i < FIFO_SIZE; i++) begin
+            input_fifo[i] <= 64'h0;
+        end
+    end else begin
+        // Input side: enqueue when valid input and we're ready
+        if (valid_in && ready_out) begin
+            input_fifo[fifo_tail] <= {a, b};
+            fifo_tail <= (fifo_tail + 1) % FIFO_SIZE;
+            fifo_count <= fifo_count + 1;
+        end
+        
+        // Output valid management - latch valid until transaction completes
+        if (valid_shift[STAGES] && !output_valid_reg) begin
+            output_valid_reg <= 1'b1;  // Latch valid when data reaches output
+            // Capture exception flags when output becomes valid
+            out_exception <= core_exception;
+            out_overflow <= core_overflow;
+            out_underflow <= core_underflow;
+        end else if (transaction_complete) begin
+            output_valid_reg <= 1'b0;  // Clear after handshake
+        end
+        
+        // Pipeline advance logic - only when not stalled
+        if (pipeline_advance) begin
+            // Shift valid bits through pipeline
+            for (i = STAGES; i > 0; i--) begin
+                valid_shift[i] <= valid_shift[i-1];
+            end
+            
+            // Feed new data to multiplier if FIFO has data
+            if (fifo_count > 0) begin
+                {core_a, core_b} <= input_fifo[fifo_head];
+                fifo_head <= (fifo_head + 1) % FIFO_SIZE;
+                fifo_count <= fifo_count - 1;
+                valid_shift[0] <= 1'b1;
+            end else begin
+                valid_shift[0] <= 1'b0;
+            end
+        end
+    end
+end
+
+endmodule
