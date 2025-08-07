@@ -1,5 +1,5 @@
-mod toplevel;
 mod desugar_conditionals;
+mod toplevel;
 
-pub use toplevel::TopLevel;
 pub use desugar_conditionals::DesugarConditionals;
+pub use toplevel::TopLevel;

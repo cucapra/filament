@@ -27,6 +27,7 @@ __pycache__
 aetherling/base
 book/
 evaluation/iterative-divider/data.json
+*.swp
 
 # Prevents editing vscode extensions further
 /.vscode/settings.json
