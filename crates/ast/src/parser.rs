@@ -553,16 +553,20 @@ impl FilamentParser {
     fn eq(input: Node) -> ParseResult<()> {
         Ok(())
     }
+    fn neq(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
 
     /// Returns the order operation and whether it is reversed
     fn order_op(input: Node) -> ParseResult<(ast::OrderOp, bool)> {
         match_nodes!(
             input.into_children();
             [gt(_)] => Ok((ast::OrderOp::Gt, false)),
-            [lt(_)] => Ok((ast::OrderOp::Gt, true)),
+            [lt(_)] => Ok((ast::OrderOp::Lt, false)),
             [gte(_)] => Ok((ast::OrderOp::Gte, false)),
-            [lte(_)] => Ok((ast::OrderOp::Gte, true)),
+            [lte(_)] => Ok((ast::OrderOp::Lte, false)),
             [eq(_)] => Ok((ast::OrderOp::Eq, false)),
+            [neq(_)] => Ok((ast::OrderOp::Neq, false)),
         )
     }
 
@@ -575,28 +579,20 @@ impl FilamentParser {
             ] => Ok(cond_c),
             [
                 time(l),
-                order_op((op, rev)),
+                order_op((op, _)),
                 time(r)
             ] => {
                 let l = l.take();
                 let r = r.take();
-                let con = if !rev {
-                    ast::OrderConstraint::new(l, r, op)
-                } else {
-                    ast::OrderConstraint::new(r, l, op)
-                };
+                let con = ast::OrderConstraint::new(l, r, op);
                 Ok(Loc::new(FCons::TimeC(con), sp))
             },
             [
                 expr(l),
-                order_op((op, rev)),
+                order_op((op, _)),
                 expr(r)
             ] => {
-                let con = if !rev {
-                    ast::OrderConstraint::new(l.take(), r.take(), op)
-                } else {
-                    ast::OrderConstraint::new(r.take(), l.take(), op)
-                };
+                let con = ast::OrderConstraint::new(l.take(), r.take(), op);
                 Ok(Loc::new(FCons::ExprC(con), sp))
             }
         )
@@ -725,12 +721,8 @@ impl FilamentParser {
     fn expr_cmp(input: Node) -> ParseResult<ast::OrderConstraint<ast::Expr>> {
         Ok(match_nodes!(
             input.into_children();
-            [expr(l), order_op((op, rev)), expr(r)] => {
-                if !rev {
-                    ast::OrderConstraint::new(l.take(), r.take(), op)
-                } else {
-                    ast::OrderConstraint::new(r.take(), l.take(), op)
-                }
+            [expr(l), order_op((op, _)), expr(r)] => {
+                ast::OrderConstraint::new(l.take(), r.take(), op)
             }
         ))
     }

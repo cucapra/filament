@@ -15,13 +15,15 @@ impl Visitor for DesugarConditionals {
     fn signature(&mut self, sig: &mut ast::Signature) -> Action {
         // Process conditional constraints and convert them to facts
         let mut new_facts = Vec::new();
-        
+
         for conditional_constraint in &sig.conditional_constraints {
             match self.desugar_conditional_constraint(conditional_constraint) {
                 Ok(facts) => new_facts.extend(facts),
                 Err(err) => {
                     // Report error immediately and exit
-                    eprintln!("[ERROR] Conditional constraint desugaring failed:");
+                    eprintln!(
+                        "[ERROR] Conditional constraint desugaring failed:"
+                    );
                     eprintln!("  - {}", err.kind);
                     std::process::exit(1);
                 }
@@ -37,7 +39,6 @@ impl Visitor for DesugarConditionals {
             Action::Continue
         }
     }
-
 }
 
 impl DesugarConditionals {
@@ -131,58 +132,46 @@ impl DesugarConditionals {
         // Handle all comparison operators
         match condition.op {
             OrderOp::Gt => {
-                // !(a > b) becomes (a <= b), which we represent as (b >= a)
-                Ok(ast::OrderConstraint::gte(
-                    condition.right.clone(),
+                // !(a > b) becomes (a <= b)
+                Ok(ast::OrderConstraint::lte(
                     condition.left.clone(),
+                    condition.right.clone(),
                 ))
             }
             OrderOp::Gte => {
-                // !(a >= b) becomes (a < b), which we represent as (b > a)
-                Ok(ast::OrderConstraint::gt(
-                    condition.right.clone(),
+                // !(a >= b) becomes (a < b)
+                Ok(ast::OrderConstraint::lt(
                     condition.left.clone(),
+                    condition.right.clone(),
+                ))
+            }
+            OrderOp::Lt => {
+                // !(a < b) becomes (a >= b)
+                Ok(ast::OrderConstraint::gte(
+                    condition.left.clone(),
+                    condition.right.clone(),
+                ))
+            }
+            OrderOp::Lte => {
+                // !(a <= b) becomes (a > b)
+                Ok(ast::OrderConstraint::gt(
+                    condition.left.clone(),
+                    condition.right.clone(),
+                ))
+            }
+            OrderOp::Neq => {
+                // !(a != b) becomes (a == b)
+                Ok(ast::OrderConstraint::eq(
+                    condition.left.clone(),
+                    condition.right.clone(),
                 ))
             }
             OrderOp::Eq => {
-                // !(a == b) - Handle binary/boolean domain cases
-                if let ast::Expr::Concrete(n) = &condition.right {
-                    // For boolean/binary domains, flip 0<->1
-                    if *n == 0 || *n == 1 {
-                        let negated_val = if *n == 0 { 1 } else { 0 };
-                        Ok(ast::OrderConstraint::eq(
-                            condition.left.clone(),
-                            ast::Expr::concrete(negated_val),
-                        ))
-                    } else {
-                        Err(Error::misc(format!(
-                            "Cannot negate equality condition with non-boolean literal: {} == {}",
-                            "expr", n
-                        )))
-                    }
-                } else if let ast::Expr::Concrete(n) = &condition.left {
-                    // Handle case where left side is the literal
-                    if *n == 0 || *n == 1 {
-                        let negated_val = if *n == 0 { 1 } else { 0 };
-                        Ok(ast::OrderConstraint::eq(
-                            condition.right.clone(),
-                            ast::Expr::concrete(negated_val),
-                        ))
-                    } else {
-                        Err(Error::misc(format!(
-                            "Cannot negate equality condition with non-boolean literal: {} == {}",
-                            n, "expr"
-                        )))
-                    }
-                } else {
-                    // For complex expressions, we can't negate equality directly
-                    // This would require disjunction (A != B means A < B || A > B)
-                    // Since Filament doesn't have disjunction, this is unsupported
-                    Err(Error::misc(
-                        "Cannot negate equality between complex expressions. \
-                         Consider restructuring your constraint to use comparison operators.".to_string()
-                    ))
-                }
+                // !(a == b) becomes (a != b)
+                Ok(ast::OrderConstraint::neq(
+                    condition.left.clone(),
+                    condition.right.clone(),
+                ))
             }
         }
     }

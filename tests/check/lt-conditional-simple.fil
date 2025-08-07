@@ -1,0 +1,11 @@
+// Simple conditional test for less-than operator
+comp LtCond[W, L]<'G: 1>() -> () where W < 5 ? L == 1 : L == 2 {
+}
+
+comp main<'G: 1>() -> () {
+  // W=3 < 5 is true, so L must be 1
+  T1 := new LtCond[3, 1];
+  
+  // W=7 < 5 is false, so L must be 2
+  T2 := new LtCond[7, 2];
+}

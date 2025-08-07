@@ -1,0 +1,57 @@
+// Comprehensive test demonstrating all operators work correctly
+// This test verifies constraint satisfaction for all 6 comparison operators
+
+// Test direct constraints with new operators
+comp DirectConstraints[A, B, C]<'G: 1>() -> () where 
+  A < 20,    // Less than
+  B <= A,    // Less than or equal
+  C != 0     // Not equal
+{
+}
+
+// Test conditional constraints with all operators
+comp AllConditionals[W1, L1, W2, L2, W3, L3, W4, L4, W5, L5, W6, L6]<'G: 1>() -> () where
+  W1 > 10 ? L1 == 1 : L1 == 0,   // Greater than
+  W2 >= 10 ? L2 == 1 : L2 == 0,  // Greater than or equal
+  W3 < 10 ? L3 == 1 : L3 == 0,   // Less than
+  W4 <= 10 ? L4 == 1 : L4 == 0,  // Less than or equal
+  W5 == 10 ? L5 == 1 : L5 == 0,  // Equal
+  W6 != 10 ? L6 == 1 : L6 == 0   // Not equal
+{
+}
+
+// Test transitivity and consistency
+comp TransitiveConstraints[X, Y, Z]<'G: 1>() -> () where
+  X < Y,
+  Y < Z,
+  X < Z  // This should be satisfied by transitivity
+{
+}
+
+comp main<'G: 1>() -> () {
+  // Test direct constraints
+  D1 := new DirectConstraints[15, 10, 5];  // 15 < 20, 10 <= 15, 5 != 0
+  D2 := new DirectConstraints[10, 10, 1];  // 10 < 20, 10 <= 10, 1 != 0
+  
+  // Test all conditional operators
+  // W1=15 > 10 is true, so L1=1
+  // W2=10 >= 10 is true, so L2=1
+  // W3=5 < 10 is true, so L3=1
+  // W4=10 <= 10 is true, so L4=1
+  // W5=10 == 10 is true, so L5=1
+  // W6=5 != 10 is true, so L6=1
+  C1 := new AllConditionals[15, 1, 10, 1, 5, 1, 10, 1, 10, 1, 5, 1];
+  
+  // Test opposite conditions
+  // W1=5 > 10 is false, so L1=0
+  // W2=5 >= 10 is false, so L2=0
+  // W3=15 < 10 is false, so L3=0
+  // W4=15 <= 10 is false, so L4=0
+  // W5=5 == 10 is false, so L5=0
+  // W6=10 != 10 is false, so L6=0
+  C2 := new AllConditionals[5, 0, 5, 0, 15, 0, 15, 0, 5, 0, 10, 0];
+  
+  // Test transitivity
+  T1 := new TransitiveConstraints[5, 10, 15];  // 5 < 10 < 15
+  T2 := new TransitiveConstraints[1, 100, 200]; // 1 < 100 < 200
+}

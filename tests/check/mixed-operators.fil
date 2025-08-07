@@ -1,0 +1,14 @@
+// Test mixed operators in conditional constraints
+comp MixedOperators[A, B, C, D, E, F]<'G: 1>() -> () where 
+  A < 10 ? B > 5 : B <= 3,
+  C != 0 ? D >= 10 : D == 0,
+  E <= 15 ? F != 7 : F == 7 {
+}
+
+comp main<'G: 1>() -> () {
+  // A=5 < 10 is true, so B > 5; C=1 != 0 is true, so D >= 10; E=10 <= 15 is true, so F != 7
+  M1 := new MixedOperators[5, 6, 1, 10, 10, 8];
+  
+  // A=15 < 10 is false, so B <= 3; C=0 != 0 is false, so D == 0; E=20 <= 15 is false, so F == 7
+  M2 := new MixedOperators[15, 3, 0, 0, 20, 7];
+}

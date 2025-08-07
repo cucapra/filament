@@ -1,0 +1,8 @@
+// Test that lte operator properly detects constraint violations
+comp LteViolation[A, B]<'G: 1>() -> () where A <= 5, B <= A, B > 10 {
+}
+
+comp main<'G: 1>() -> () {
+  // This should fail: B <= A <= 5 but B > 10 is contradictory
+  Bad := new LteViolation[5, 11];
+}

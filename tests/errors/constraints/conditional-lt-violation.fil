@@ -1,0 +1,8 @@
+// Test that conditional constraints with lt operator detect violations
+comp ConditionalLtViolation[W, L]<'G: 1>() -> () where W < 10 ? L == 1 : L == 2 {
+}
+
+comp main<'G: 1>() -> () {
+  // This should fail: W=5 < 10 is true, so L must be 1, but we provide 2
+  Bad := new ConditionalLtViolation[5, 2];
+}

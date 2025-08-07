@@ -1,0 +1,8 @@
+// Test that neq operator properly detects constraint violations
+comp NeqViolation[A]<'G: 1>() -> () where A != 5, A == 5 {
+}
+
+comp main<'G: 1>() -> () {
+  // This should fail: A != 5 and A == 5 is contradictory
+  Bad := new NeqViolation[5];
+}

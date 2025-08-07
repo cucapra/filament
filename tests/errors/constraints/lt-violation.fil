@@ -1,0 +1,8 @@
+// Test that lt operator properly detects constraint violations
+comp LtViolation[A, B]<'G: 1>() -> () where A < 10, B < A {
+}
+
+comp main<'G: 1>() -> () {
+  // This should fail: 15 < 10 is false
+  Bad := new LtViolation[15, 5];
+}

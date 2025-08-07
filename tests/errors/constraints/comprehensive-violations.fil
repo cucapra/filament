@@ -1,0 +1,13 @@
+// Test that violations are detected for all operators
+
+// This component has impossible constraints
+comp ImpossibleConstraints[A]<'G: 1>() -> () where
+  A < 10,
+  A > 20  // Cannot be both < 10 and > 20
+{
+}
+
+comp main<'G: 1>() -> () {
+  // This should fail: no value of A can satisfy both constraints
+  Bad := new ImpossibleConstraints[15];
+}

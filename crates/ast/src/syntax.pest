@@ -33,7 +33,8 @@ gte = { ">=" }
 lt =  { "<" }
 lte = { "<=" }
 eq =  { "==" }
-order_op = { gte | gt | lte | lt | eq }
+neq = { "!=" }
+order_op = { gte | gt | lte | lt | neq | eq }
 
 conditional_constraint = {
   expr_cmp ~ "?" ~ constraint ~ ":" ~ constraint

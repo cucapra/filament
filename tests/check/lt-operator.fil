@@ -1,0 +1,17 @@
+// Test less-than operator in constraints and conditional constraints
+comp LtBasic[A, B]<'G: 1>() -> () where A < 10, B < A {
+}
+
+comp LtConditional[W, L]<'G: 1>() -> () where W < 5 ? L == 1 : L == 2 {
+}
+
+comp main<'G: 1>() -> () {
+  // Basic lt constraint: 5 < 10 and 3 < 5 are satisfied
+  B1 := new LtBasic[5, 3];
+  
+  // Conditional with lt: W=3 < 5 is true, so L must be 1
+  C1 := new LtConditional[3, 1];
+  
+  // Conditional with lt: W=7 < 5 is false, so L must be 2
+  C2 := new LtConditional[7, 2];
+}

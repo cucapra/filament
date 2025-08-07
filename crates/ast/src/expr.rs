@@ -365,6 +365,9 @@ impl ECtx {
                     OrderOp::Gt => ">",
                     OrderOp::Gte => ">=",
                     OrderOp::Eq => "=",
+                    OrderOp::Lt => "<",
+                    OrderOp::Lte => "<=",
+                    OrderOp::Neq => "!=",
                 };
                 let then = self.print(then);
                 let alt = self.print(alt);

@@ -1,0 +1,8 @@
+// Simple test for less-than operator
+comp LtTest[A]<'G: 1>() -> () where A < 10 {
+}
+
+comp main<'G: 1>() -> () {
+  // 5 < 10 should satisfy the constraint
+  T1 := new LtTest[5];
+}

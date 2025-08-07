@@ -1,0 +1,14 @@
+---CODE---
+1
+---STDERR---
+error: instantiation violates parameter constraint
+  ┌─ tests/errors/constraints/lte-violation.fil:2:54
+  │
+2 │ comp LteViolation[A, B]<'G: 1>() -> () where A <= 5, B <= A, B > 10 {
+  │                                                      ^^^^^^ constraint was violated
+  ·
+7 │   Bad := new LteViolation[5, 11];
+  │              ------------ instantiation occurs here
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

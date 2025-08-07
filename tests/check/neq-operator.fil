@@ -1,0 +1,26 @@
+// Test not-equal operator in constraints and conditional constraints
+comp NeqBasic[A, B]<'G: 1>() -> () where A != 0, B != A {
+}
+
+comp NeqConditional[W, L]<'G: 1>() -> () where W != 5 ? L == 1 : L == 2 {
+}
+
+comp NeqWithComparison[X, Y]<'G: 1>() -> () where X != Y, X > Y {
+}
+
+comp main<'G: 1>() -> () {
+  // Basic neq constraint: 5 != 0 and 3 != 5 are satisfied
+  B1 := new NeqBasic[5, 3];
+  
+  // Basic neq constraint: 10 != 0 and 0 != 10 are satisfied  
+  B2 := new NeqBasic[10, 0];
+  
+  // Conditional with neq: W=3 != 5 is true, so L must be 1
+  C1 := new NeqConditional[3, 1];
+  
+  // Conditional with neq: W=5 != 5 is false, so L must be 2
+  C2 := new NeqConditional[5, 2];
+  
+  // X != Y and X > Y implies X is strictly greater
+  N1 := new NeqWithComparison[10, 5];
+}

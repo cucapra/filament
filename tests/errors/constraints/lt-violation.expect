@@ -1,0 +1,14 @@
+---CODE---
+1
+---STDERR---
+error: instantiation violates parameter constraint
+  ┌─ tests/errors/constraints/lt-violation.fil:2:45
+  │
+2 │ comp LtViolation[A, B]<'G: 1>() -> () where A < 10, B < A {
+  │                                             ^^^^^^ constraint was violated
+  ·
+7 │   Bad := new LtViolation[15, 5];
+  │              ----------- instantiation occurs here
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

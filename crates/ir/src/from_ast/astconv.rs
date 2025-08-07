@@ -303,8 +303,28 @@ impl BuildCtx<'_> {
             ast::OrderOp::Gt => Cmp::Gt,
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
+            ast::OrderOp::Lt => Cmp::Gt, // Convert a < b to b > a
+            ast::OrderOp::Lte => Cmp::Gte, // Convert a <= b to b >= a
+            ast::OrderOp::Neq => {
+                // Handle != by creating NOT(a == b)
+                let eq_prop = self.comp().add(ir::Prop::Cmp(ir::CmpOp {
+                    lhs,
+                    op: Cmp::Eq,
+                    rhs,
+                }));
+                return Ok(eq_prop.not(self.comp()));
+            }
         };
-        Ok(self.comp().add(ir::Prop::Cmp(ir::CmpOp { lhs, op, rhs })))
+        // For Lt and Lte, we need to swap operands
+        let (final_lhs, final_rhs) = match cons.op {
+            ast::OrderOp::Lt | ast::OrderOp::Lte => (rhs, lhs),
+            _ => (lhs, rhs),
+        };
+        Ok(self.comp().add(ir::Prop::Cmp(ir::CmpOp {
+            lhs: final_lhs,
+            op,
+            rhs: final_rhs,
+        })))
     }
 
     fn event_cons(
@@ -317,10 +337,28 @@ impl BuildCtx<'_> {
             ast::OrderOp::Gt => Cmp::Gt,
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
+            ast::OrderOp::Lt => Cmp::Gt, // Convert a < b to b > a
+            ast::OrderOp::Lte => Cmp::Gte, // Convert a <= b to b >= a
+            ast::OrderOp::Neq => {
+                // Handle != by creating NOT(a == b)
+                let eq_prop = self.comp().add(ir::Prop::TimeCmp(ir::CmpOp {
+                    lhs,
+                    op: Cmp::Eq,
+                    rhs,
+                }));
+                return Ok(eq_prop.not(self.comp()));
+            }
         };
-        Ok(self
-            .comp()
-            .add(ir::Prop::TimeCmp(ir::CmpOp { lhs, op, rhs })))
+        // For Lt and Lte, we need to swap operands
+        let (final_lhs, final_rhs) = match cons.op {
+            ast::OrderOp::Lt | ast::OrderOp::Lte => (rhs, lhs),
+            _ => (lhs, rhs),
+        };
+        Ok(self.comp().add(ir::Prop::TimeCmp(ir::CmpOp {
+            lhs: final_lhs,
+            op,
+            rhs: final_rhs,
+        })))
     }
 
     fn implication(

@@ -6,13 +6,19 @@ pub enum OrderOp {
     Gt,
     Gte,
     Eq,
+    Lt,
+    Lte,
+    Neq,
 }
 impl std::fmt::Display for OrderOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let op = match self {
             OrderOp::Gt => ">",
-            OrderOp::Eq => "=",
             OrderOp::Gte => ">=",
+            OrderOp::Lt => "<",
+            OrderOp::Lte => "<=",
+            OrderOp::Eq => "=",
+            OrderOp::Neq => "!=",
         };
         write!(f, "{op}")
     }
@@ -48,9 +54,9 @@ where
 
     pub fn lt(l: T, r: T) -> Self {
         Self {
-            left: r,
-            right: l,
-            op: OrderOp::Gt,
+            left: l,
+            right: r,
+            op: OrderOp::Lt,
         }
     }
 
@@ -72,9 +78,17 @@ where
 
     pub fn lte(l: T, r: T) -> Self {
         OrderConstraint {
-            left: r,
-            right: l,
-            op: OrderOp::Gte,
+            left: l,
+            right: r,
+            op: OrderOp::Lte,
+        }
+    }
+
+    pub fn neq(l: T, r: T) -> Self {
+        OrderConstraint {
+            left: l,
+            right: r,
+            op: OrderOp::Neq,
         }
     }
 }

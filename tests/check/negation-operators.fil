@@ -1,0 +1,78 @@
+// Test negation of new operators in conditional constraints
+// This verifies that our negation implementation correctly handles all operators
+
+comp NegationLt[A, B]<'G: 1>() -> () where 
+  // !(A < 10) becomes (A >= 10)
+  A < 10 ? B == 1 : B == 2 {
+}
+
+comp NegationLte[A, B]<'G: 1>() -> () where 
+  // !(A <= 10) becomes (A > 10)
+  A <= 10 ? B == 1 : B == 2 {
+}
+
+comp NegationNeq[A, B]<'G: 1>() -> () where 
+  // !(A != 10) becomes (A == 10)
+  A != 10 ? B == 1 : B == 2 {
+}
+
+comp NegationGt[A, B]<'G: 1>() -> () where 
+  // !(A > 10) becomes (A <= 10)
+  A > 10 ? B == 1 : B == 2 {
+}
+
+comp NegationGte[A, B]<'G: 1>() -> () where 
+  // !(A >= 10) becomes (A < 10)
+  A >= 10 ? B == 1 : B == 2 {
+}
+
+comp NegationEq[A, B]<'G: 1>() -> () where 
+  // !(A == 10) becomes (A != 10)
+  A == 10 ? B == 1 : B == 2 {
+}
+
+comp main<'G: 1>() -> () {
+  // Test negation of < operator
+  // A=5 < 10 is true, so B=1
+  Lt1 := new NegationLt[5, 1];
+  // A=15 < 10 is false (i.e., A >= 10), so B=2
+  Lt2 := new NegationLt[15, 2];
+  // A=10 < 10 is false (i.e., A >= 10), so B=2
+  Lt3 := new NegationLt[10, 2];
+  
+  // Test negation of <= operator
+  // A=5 <= 10 is true, so B=1
+  Lte1 := new NegationLte[5, 1];
+  // A=15 <= 10 is false (i.e., A > 10), so B=2
+  Lte2 := new NegationLte[15, 2];
+  // A=10 <= 10 is true, so B=1
+  Lte3 := new NegationLte[10, 1];
+  
+  // Test negation of != operator
+  // A=5 != 10 is true, so B=1
+  Neq1 := new NegationNeq[5, 1];
+  // A=10 != 10 is false (i.e., A == 10), so B=2
+  Neq2 := new NegationNeq[10, 2];
+  
+  // Test negation of > operator
+  // A=15 > 10 is true, so B=1
+  Gt1 := new NegationGt[15, 1];
+  // A=5 > 10 is false (i.e., A <= 10), so B=2
+  Gt2 := new NegationGt[5, 2];
+  // A=10 > 10 is false (i.e., A <= 10), so B=2
+  Gt3 := new NegationGt[10, 2];
+  
+  // Test negation of >= operator
+  // A=15 >= 10 is true, so B=1
+  Gte1 := new NegationGte[15, 1];
+  // A=5 >= 10 is false (i.e., A < 10), so B=2
+  Gte2 := new NegationGte[5, 2];
+  // A=10 >= 10 is true, so B=1
+  Gte3 := new NegationGte[10, 1];
+  
+  // Test negation of == operator
+  // A=10 == 10 is true, so B=1
+  Eq1 := new NegationEq[10, 1];
+  // A=5 == 10 is false (i.e., A != 10), so B=2
+  Eq2 := new NegationEq[5, 2];
+}

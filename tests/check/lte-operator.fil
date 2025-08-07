@@ -1,0 +1,26 @@
+// Test less-than-or-equal operator in constraints and conditional constraints
+comp LteBasic[A, B]<'G: 1>() -> () where A <= 10, B <= A {
+}
+
+comp LteConditional[W, L]<'G: 1>() -> () where W <= 5 ? L == 1 : L == 2 {
+}
+
+comp LteEquality[X, Y]<'G: 1>() -> () where X <= Y, Y <= X, X == Y {
+}
+
+comp main<'G: 1>() -> () {
+  // Basic lte constraint: 10 <= 10 and 5 <= 10 are satisfied
+  B1 := new LteBasic[10, 5];
+  
+  // Basic lte constraint: 5 <= 10 and 5 <= 5 are satisfied
+  B2 := new LteBasic[5, 5];
+  
+  // Conditional with lte: W=5 <= 5 is true, so L must be 1
+  C1 := new LteConditional[5, 1];
+  
+  // Conditional with lte: W=6 <= 5 is false, so L must be 2
+  C2 := new LteConditional[6, 2];
+  
+  // When X <= Y and Y <= X, then X == Y (antisymmetry)
+  E1 := new LteEquality[7, 7];
+}
