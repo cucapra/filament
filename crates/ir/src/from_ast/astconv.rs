@@ -517,27 +517,33 @@ impl BuildCtx<'_> {
         port: ast::Port,
         dir: ir::Direction,
     ) -> BuildRes<ir::Access> {
-        let acc = match port {
-            ast::Port::This(n) => {
+        let acc = match (&port.base, &port.access[..]) {
+            (ast::PortRef::This { port: name }, []) => {
                 // NOTE: The AST does not distinguish between ports
                 // defined by the signature and locally defined ports so we
                 // must search both.
-                let owner = OwnedPort::Sig(dir, n.clone());
+                let owner = OwnedPort::Sig(dir, name.clone());
                 let port = if let Some(port) = self.find_port(&owner) {
                     port
                 } else {
-                    let owner = OwnedPort::Local(n);
+                    let owner = OwnedPort::Local(name.clone());
                     self.get_port(&owner)?
                 };
 
                 ir::Access::port(port, self.comp())
             }
-            ast::Port::InvPort { invoke, name } => {
+            (
+                ast::PortRef::Instance {
+                    instance: invoke,
+                    port: name,
+                },
+                [],
+            ) => {
                 let inv = self.get_inv(&invoke)?;
-                let owner = OwnedPort::Inv(inv, dir, name);
+                let owner = OwnedPort::Inv(inv, dir, name.clone());
                 ir::Access::port(self.get_port(&owner)?, self.comp())
             }
-            ast::Port::Bundle { name, access } => {
+            (ast::PortRef::This { port: name }, access) => {
                 // NOTE(rachit): The AST does not distinguish between bundles
                 // defined by the signature and locally defined bundles so we
                 // must search both.
@@ -545,26 +551,28 @@ impl BuildCtx<'_> {
                 let port = if let Some(p) = self.find_port(&owner) {
                     p
                 } else {
-                    let owner = OwnedPort::Local(name);
+                    let owner = OwnedPort::Local(name.clone());
                     self.get_port(&owner)?
                 };
                 let ranges = access
-                    .into_iter()
-                    .map(|a| self.access(a.take()))
+                    .iter()
+                    .map(|a| self.access(a.clone().take()))
                     .collect::<BuildRes<Vec<_>>>()?;
                 ir::Access { port, ranges }
             }
-            ast::Port::InvBundle {
-                invoke,
-                port,
+            (
+                ast::PortRef::Instance {
+                    instance: invoke,
+                    port,
+                },
                 access,
-            } => {
+            ) => {
                 let inv = self.get_inv(&invoke)?;
-                let owner = OwnedPort::Inv(inv, dir, port);
+                let owner = OwnedPort::Inv(inv, dir, port.clone());
                 let port = self.get_port(&owner)?;
                 let ranges = access
-                    .into_iter()
-                    .map(|a| self.access(a.take()))
+                    .iter()
+                    .map(|a| self.access(a.clone().take()))
                     .collect::<BuildRes<Vec<_>>>()?;
                 ir::Access { port, ranges }
             }

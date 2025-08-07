@@ -5,7 +5,8 @@ use fil_ir as ir;
 use filament::ir_passes::BuildDomination;
 use filament::{ast_pass_pipeline, ir_pass_pipeline, log_pass, log_time};
 use filament::{
-    ast_passes as ap, ast_visitor::Visitor as AstVisitor, cmdline, ir_passes as ip, ir_visitor::Visitor as IrVisitor, resolver::Resolver,
+    ast_passes as ap, ast_visitor::Visitor as AstVisitor, cmdline,
+    ir_passes as ip, ir_visitor::Visitor as IrVisitor, resolver::Resolver,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
