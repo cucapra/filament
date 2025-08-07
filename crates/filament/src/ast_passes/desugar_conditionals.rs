@@ -1,7 +1,7 @@
 use crate::ast_visitor::{Action, Visitor};
 use fil_ast as ast;
 use fil_ast::Loc;
-use fil_utils::{Error, FilamentResult};
+use fil_utils::{Error, FilamentResult, GPosIdx};
 
 /// Desugars conditional constraints into assume statements
 #[derive(Default)]
@@ -48,6 +48,8 @@ impl DesugarConditionals {
     ) -> FilamentResult<Vec<ast::Command>> {
         use ast::FCons;
 
+        let original_loc = constraint.pos(); // Capture original location
+
         match &**constraint {
             FCons::ConditionalC {
                 condition,
@@ -57,12 +59,12 @@ impl DesugarConditionals {
                 let mut facts = Vec::new();
 
                 // Create: assume condition => then_constraint
-                let then_fact = self.create_assume_fact(condition.clone(), then_constraint)?;
+                let then_fact = self.create_assume_fact(condition.clone(), then_constraint, original_loc)?;
                 facts.push(ast::Command::Fact(then_fact));
 
                 // Create: assume !condition => else_constraint
                 let negated_condition = self.negate_condition(condition)?;
-                let else_fact = self.create_assume_fact(negated_condition, else_constraint)?;
+                let else_fact = self.create_assume_fact(negated_condition, else_constraint, original_loc)?;
                 facts.push(ast::Command::Fact(else_fact));
 
                 Ok(facts)
@@ -79,6 +81,7 @@ impl DesugarConditionals {
         &self,
         condition: ast::OrderConstraint<ast::Expr>,
         constraint: &ast::FCons,
+        original_loc: GPosIdx,
     ) -> FilamentResult<ast::Fact> {
         // Convert FCons to OrderConstraint
         let constraint_oc = self.fcons_to_order_constraint(constraint)?;
@@ -86,8 +89,8 @@ impl DesugarConditionals {
         // Create implication: condition => constraint
         let implication = ast::Implication::implies(condition, constraint_oc);
 
-        // Create assume fact
-        Ok(ast::Fact::assume(Loc::unknown(implication)))
+        // Create assume fact with original location
+        Ok(ast::Fact::assume(Loc::new(implication, original_loc)))
     }
 
     fn fcons_to_order_constraint(

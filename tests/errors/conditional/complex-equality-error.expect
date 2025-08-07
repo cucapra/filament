@@ -2,7 +2,12 @@
 1
 ---STDERR---
 error: cannot prove source-level fact
- = Elaborated during monomorphization.
+  ┌─ tests/errors/conditional/complex-equality-error.fil:2:54
+  │
+2 │ comp ComplexEqualityError[A, B]<'G: 1>() -> () where A + B == B * 2 ? A == 1 : A == 0 {
+  │                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot prove source-level fact
+  │
+  = Elaborated during monomorphization.
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.

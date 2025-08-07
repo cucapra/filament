@@ -2,7 +2,12 @@
 1
 ---STDERR---
 error: cannot prove source-level fact
- = Elaborated during monomorphization.
+  ┌─ tests/errors/constraints/conditional-lt-violation.fil:2:56
+  │
+2 │ comp ConditionalLtViolation[W, L]<'G: 1>() -> () where W < 10 ? L == 1 : L == 2 {
+  │                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^ cannot prove source-level fact
+  │
+  = Elaborated during monomorphization.
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.
