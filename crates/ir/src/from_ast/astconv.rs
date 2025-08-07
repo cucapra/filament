@@ -539,7 +539,7 @@ impl BuildCtx<'_> {
                 },
                 [],
             ) => {
-                let inv = self.get_inv(&invoke)?;
+                let inv = self.get_inv(invoke)?;
                 let owner = OwnedPort::Inv(inv, dir, name.clone());
                 ir::Access::port(self.get_port(&owner)?, self.comp())
             }
@@ -567,7 +567,7 @@ impl BuildCtx<'_> {
                 },
                 access,
             ) => {
-                let inv = self.get_inv(&invoke)?;
+                let inv = self.get_inv(invoke)?;
                 let owner = OwnedPort::Inv(inv, dir, port.clone());
                 let port = self.get_port(&owner)?;
                 let ranges = access
