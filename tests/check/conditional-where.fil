@@ -1,0 +1,7 @@
+// Test basic conditional constraint syntax
+comp test1[W]<'G: L>() -> () with {
+  some L;
+} where W > 0, W > 10 ? L == 2 : L == 1 {}
+
+// Simple main component to test parsing
+comp main<'G: 1>() -> () {}

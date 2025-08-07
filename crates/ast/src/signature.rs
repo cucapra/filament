@@ -128,6 +128,8 @@ pub struct Signature {
     pub param_constraints: Vec<Loc<OrderConstraint<Expr>>>,
     /// Constraints over events in the signature
     pub event_constraints: Vec<Loc<OrderConstraint<Time>>>,
+    /// Conditional constraints that need to be desugared into assume statements
+    pub conditional_constraints: Vec<Loc<crate::parser::FCons>>,
     /// All the input/output ports.
     pub ports: Vec<Loc<PortDef>>,
     /// Index of the first output port in the ports vector
@@ -163,6 +165,7 @@ impl Signature {
             outputs_idx,
             param_constraints,
             event_constraints,
+            conditional_constraints: vec![],
         }
     }
 

@@ -1,0 +1,6 @@
+// Test nested conditional constraint syntax
+comp test[W]<'G: L>() -> () with {
+  some L where L > 0;
+} where W > 0, W > 20 ? L == 3 : W > 10 ? L == 2 : L == 1 {}
+
+comp main<'G: 1>() -> () {}

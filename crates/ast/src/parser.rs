@@ -50,6 +50,11 @@ pub enum BodyEl {
 pub enum FCons {
     ExprC(ast::OrderConstraint<ast::Expr>),
     TimeC(ast::OrderConstraint<ast::Time>),
+    ConditionalC {
+        condition: ast::OrderConstraint<ast::Expr>,
+        then_constraint: Box<FCons>,
+        else_constraint: Box<FCons>,
+    },
 }
 
 pub enum Port {
@@ -190,17 +195,21 @@ impl FilamentParser {
             input.clone().into_children();
             [param_var(param), expr(e)] => Ok(Loc::new(ast::SigBind::let_(param, e.take()), sp)),
             [opaque(_), param_var(param), constraints(cons)] => {
-                let (expr, ev) = cons;
+                let (expr, ev, conditional) = cons;
                 if !ev.is_empty() {
                     Err(input.error("Cannot specify event constraints in an existential binding"))
+                } else if !conditional.is_empty() {
+                    Err(input.error("Cannot specify conditional constraints in an existential binding"))
                 } else {
                     Ok(Loc::new(ast::SigBind::exists(param, true, expr), sp))
                 }
             },
             [some(_), param_var(param), constraints(cons)] => {
-                let (expr, ev) = cons;
+                let (expr, ev, conditional) = cons;
                 if !ev.is_empty() {
                     Err(input.error("Cannot specify event constraints in an existential binding"))
+                } else if !conditional.is_empty() {
+                    Err(input.error("Cannot specify conditional constraints in an existential binding"))
                 } else {
                     Ok(Loc::new(ast::SigBind::exists(param, false, expr), sp))
                 }
@@ -562,6 +571,9 @@ impl FilamentParser {
         match_nodes!(
             input.clone().into_children();
             [
+                conditional_constraint(cond_c)
+            ] => Ok(cond_c),
+            [
                 time(l),
                 order_op((op, rev)),
                 time(r)
@@ -590,26 +602,42 @@ impl FilamentParser {
         )
     }
 
+    fn conditional_constraint(input: Node) -> ParseResult<Loc<FCons>> {
+        let sp = Self::get_span(&input);
+        match_nodes!(
+            input.into_children();
+            [expr_cmp(cond), constraint(then_c), constraint(else_c)] => {
+                Ok(Loc::new(FCons::ConditionalC {
+                    condition: cond,
+                    then_constraint: Box::new(then_c.take()),
+                    else_constraint: Box::new(else_c.take()),
+                }, sp))
+            }
+        )
+    }
+
     #[allow(clippy::type_complexity)]
     fn constraints(
         input: Node,
     ) -> ParseResult<(
         Vec<Loc<ast::OrderConstraint<ast::Expr>>>,
         Vec<Loc<ast::OrderConstraint<ast::Time>>>,
+        Vec<Loc<FCons>>,
     )> {
         Ok(match_nodes!(
             input.into_children();
-            [] => (vec![], vec![]),
+            [] => (vec![], vec![], vec![]),
             [constraint(cons)..] => {
-                let (mut expr, mut time) = (vec![], vec![]);
+                let (mut expr, mut time, mut conditional) = (vec![], vec![], vec![]);
                 for con in cons {
                     let pos = con.pos();
-                    match con.take() {
-                        FCons::ExprC(c) => expr.push(Loc::new(c, pos)),
-                        FCons::TimeC(c) => time.push(Loc::new(c, pos)),
+                    match &*con {
+                        FCons::ExprC(c) => expr.push(Loc::new(c.clone(), pos)),
+                        FCons::TimeC(c) => time.push(Loc::new(c.clone(), pos)),
+                        FCons::ConditionalC { .. } => conditional.push(con),
                     }
                 }
-                (expr, time)
+                (expr, time, conditional)
             }
         ))
     }
@@ -640,10 +668,10 @@ impl FilamentParser {
                 abstract_var(abstract_vars),
                 io(io),
                 sig_bindings(sig_binds),
-                constraints((expr_c, time_c))
+                constraints((expr_c, time_c, conditional_c))
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
-                ast::Signature::new(
+                let mut sig = ast::Signature::new(
                     name,
                     attributes,
                     params,
@@ -655,7 +683,9 @@ impl FilamentParser {
                     expr_c,
                     time_c,
                     sig_binds,
-                 )
+                );
+                sig.conditional_constraints = conditional_c;
+                sig
             },
             [
                 attributes(attributes),
@@ -663,10 +693,10 @@ impl FilamentParser {
                 params(params),
                 io(io),
                 sig_bindings(sig_binds),
-                constraints((expr_c, time_c))
+                constraints((expr_c, time_c, conditional_c))
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
-                ast::Signature::new(
+                let mut sig = ast::Signature::new(
                     name,
                     attributes,
                     params,
@@ -678,7 +708,9 @@ impl FilamentParser {
                     expr_c,
                     time_c,
                     sig_binds,
-                 )
+                );
+                sig.conditional_constraints = conditional_c;
+                sig
             }
         ))
     }

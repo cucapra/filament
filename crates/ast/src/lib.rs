@@ -23,7 +23,7 @@ pub use fil_utils::Id;
 pub use implication::Implication;
 pub use interval::Range;
 pub use loc::Loc;
-pub use parser::FilamentParser;
+pub use parser::{FilamentParser, FCons};
 pub use port::{InterfaceDef, PortDef};
 pub use signature::{EventBind, ParamBind, SigBind, Signature};
 pub use time::{Time, TimeSub};

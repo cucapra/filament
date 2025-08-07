@@ -35,8 +35,13 @@ lte = { "<=" }
 eq =  { "==" }
 order_op = { gte | gt | lte | lt | eq }
 
+conditional_constraint = {
+  expr_cmp ~ "?" ~ constraint ~ ":" ~ constraint
+}
+
 constraint = {
-  expr ~ order_op ~ expr
+  conditional_constraint
+  | expr ~ order_op ~ expr
   | time ~ order_op ~ time
 }
 constraints = {
