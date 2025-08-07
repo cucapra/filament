@@ -1,0 +1,7 @@
+// Test that complex equality expressions produce proper errors
+comp ComplexEqualityError[A, B]<'G: 1>() -> () where A + B == B * 2 ? A == 1 : A == 0 {
+}
+
+comp main<'G: 1>() -> () {
+  C := new ComplexEqualityError[1, 2];
+}

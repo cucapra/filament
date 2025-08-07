@@ -1,0 +1,7 @@
+// Test that deeply nested conditionals produce proper errors
+comp DeepNested[A, B, C]<'G: 1>() -> () where A > 10 ? B > 5 ? C == 1 : C == 2 : C == 0 {
+}
+
+comp main<'G: 1>() -> () {
+  D := new DeepNested[15, 8, 1];
+}

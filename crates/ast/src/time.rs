@@ -1,7 +1,7 @@
 use super::{Binding, Expr, Id};
 use std::fmt::Display;
 
-#[derive(Clone, Hash)]
+#[derive(Clone, Hash, Debug)]
 /// Represents expression of the form `G+1+k`
 pub struct Time {
     /// The event for the time expression

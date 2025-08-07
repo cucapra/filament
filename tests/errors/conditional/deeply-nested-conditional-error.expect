@@ -1,0 +1,5 @@
+---CODE---
+1
+---STDERR---
+[ERROR] Conditional constraint desugaring failed:
+  - Nested conditional constraints are not yet supported. Please flatten your conditional constraints into separate where clauses.

@@ -1,0 +1,5 @@
+---CODE---
+1
+---STDERR---
+[ERROR] Conditional constraint desugaring failed:
+  - Cannot negate equality between complex expressions. Consider restructuring your constraint to use comparison operators.

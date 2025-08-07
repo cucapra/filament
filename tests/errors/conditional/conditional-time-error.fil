@@ -1,0 +1,7 @@
+// Test that time constraints in conditionals produce proper errors
+comp TimeConditionalError[W]<'G: 1>() -> () where W > 10 ? 'G > 'G + 1 : W == 0 {
+}
+
+comp main<'G: 1>() -> () {
+  T := new TimeConditionalError[5];
+}

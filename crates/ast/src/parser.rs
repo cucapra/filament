@@ -46,7 +46,7 @@ pub enum BodyEl {
     Comp(Box<ast::Component>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FCons {
     ExprC(ast::OrderConstraint<ast::Expr>),
     TimeC(ast::OrderConstraint<ast::Time>),

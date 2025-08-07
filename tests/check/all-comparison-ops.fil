@@ -1,0 +1,11 @@
+// Test all comparison operators in conditional constraints
+comp ComparisonOps[A, B, C, D, E]<'G: 1>() -> () where 
+  A > 10 ? B == 1 : B == 0,
+  A >= 5 ? C == 1 : C == 0, 
+  A < 20 ? D == 1 : D == 0,
+  A <= 15 ? E == 1 : E == 0 {
+}
+
+comp main<'G: 1>() -> () {
+  C := new ComparisonOps[12, 1, 1, 1, 1];
+}

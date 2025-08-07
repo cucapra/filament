@@ -1,0 +1,5 @@
+---CODE---
+1
+---STDERR---
+[ERROR] Conditional constraint desugaring failed:
+  - Time constraints in conditional expressions are not supported. Conditional constraints must use parameter expressions only.
