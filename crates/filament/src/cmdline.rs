@@ -57,6 +57,10 @@ pub struct Opts {
     #[argh(option, long = "dump-after")]
     pub dump_after: Vec<String>,
 
+    /// print out the IR after every pass
+    #[argh(switch, long = "dump-all")]
+    pub dump_all: bool,
+
     /// print out assignments that falsify the constraints
     #[argh(switch, long = "show-models")]
     pub show_models: bool,
@@ -100,15 +104,17 @@ pub struct Opts {
     /// backend to use (default: verilog): calyx, verilog
     #[argh(option, long = "backend", default = "Backend::Verilog")]
     pub backend: Backend,
+
     /// disable generation of counter-based FSMs in the backend.
     /// The default (non-counter) FSM is represented by a single bit Shift Register counting through the number of states.
     /// However, for components with a large number of states or a large II, it may be more efficient to use a counter-based FSM,
     /// where one counter loops every II states, at which point it increments the state counter.
     #[argh(switch, long = "no-counter-fsms")]
     pub no_counter_fsms: bool,
-    /// preserves original port names during compilation.
-    #[argh(switch, long = "preserve-names")]
-    pub preserve_names: bool,
+
+    /// do not preserve original port names during compilation.
+    #[argh(switch, long = "no-preserve-names")]
+    pub no_preserve_names: bool,
 
     // Solver specific configuration
     /// solver to use (default: cvc5): cvc5, z3

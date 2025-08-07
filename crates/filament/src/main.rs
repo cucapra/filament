@@ -122,7 +122,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         return Ok(());
     }
     let calyx =
-        log_time!(ip::Compile::compile(ir, opts.preserve_names), "compile");
+        log_time!(ip::Compile::compile(ir, !opts.no_preserve_names), "compile");
     match opts.backend {
         cmdline::Backend::Verilog => {
             gen_verilog(calyx).unwrap();
