@@ -8,22 +8,10 @@ error: unused instance: instance is created but never invoked
   │   ^^^^^^^^^ instance defined here
 
 error: unused invocation: output ports on invocation never used
-   ┌─ tests/warnings/unused/simple-unused.fil:15:3
-   │
-15 │   used_invoke := UsedAdd<'G>();
-   │   ^^^^^^^^^^^ invocation defined here
-
-error: unused invocation: output ports on invocation never used
    ┌─ tests/warnings/unused/simple-unused.fil:12:3
    │
 12 │   unused_invoke := UsedAdd<'G>();
    │   ^^^^^^^^^^^^^ invocation defined here
-
-error: unused parameter: parameter is defined but never used
-  ┌─ tests/warnings/unused/simple-unused.fil:5:7
-  │
-5 │   let USED_PARAM = 10;
-  │       ^^^^^^^^^^ parameter defined here
 
 error: unused parameter: parameter is defined but never used
   ┌─ tests/warnings/unused/simple-unused.fil:4:7
@@ -31,5 +19,11 @@ error: unused parameter: parameter is defined but never used
 4 │   let UNUSED_PARAM = 42;
   │       ^^^^^^^^^^^^ parameter defined here
 
-Compilation failed with 5 errors.
+error: unused parameter: parameter is defined but never used
+  ┌─ tests/warnings/unused/simple-unused.fil:5:7
+  │
+5 │   let USED_PARAM = 10;
+  │       ^^^^^^^^^^ parameter defined here
+
+Compilation failed with 4 errors.
 Run with --show-models to generate assignments for failing constraints.

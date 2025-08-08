@@ -1,6 +1,6 @@
-comp Add<'G:1>() -> () {}
+comp Add<'G:1>() -> (out: ['G, 'G+1] 32) {}
 
-comp main<'G:1>() -> () with {
+comp main<'G:1>() -> (out: ['G, 'G+1] 32) with {
   let UNUSED_PARAM = 42;
   let USED_PARAM = 10;
 } {
@@ -13,4 +13,5 @@ comp main<'G:1>() -> () with {
   
   // Actually used
   used_invoke := UsedAdd<'G>();
+  out = used_invoke.out;
 }
