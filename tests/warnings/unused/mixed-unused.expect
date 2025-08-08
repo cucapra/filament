@@ -13,5 +13,11 @@ error: unused invocation: output ports on invocation never used
 18 │   adder := new Add[USED_PARAM]<'G>(in1, in2);
    │   ^^^^^ invocation defined here
 
-Compilation failed with 2 errors.
+error: unused parameter: parameter is defined but never used
+   ┌─ tests/warnings/unused/mixed-unused.fil:11:7
+   │
+11 │   let UNUSED_PARAM = 100;
+   │       ^^^^^^^^^^^^ parameter defined here
+
+Compilation failed with 3 errors.
 Run with --show-models to generate assignments for failing constraints.

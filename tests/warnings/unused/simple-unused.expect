@@ -19,5 +19,17 @@ error: unused invocation: output ports on invocation never used
 12 │   unused_invoke := UsedAdd<'G>();
    │   ^^^^^^^^^^^^^ invocation defined here
 
-Compilation failed with 3 errors.
+error: unused parameter: parameter is defined but never used
+  ┌─ tests/warnings/unused/simple-unused.fil:5:7
+  │
+5 │   let USED_PARAM = 10;
+  │       ^^^^^^^^^^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+  ┌─ tests/warnings/unused/simple-unused.fil:4:7
+  │
+4 │   let UNUSED_PARAM = 42;
+  │       ^^^^^^^^^^^^ parameter defined here
+
+Compilation failed with 5 errors.
 Run with --show-models to generate assignments for failing constraints.

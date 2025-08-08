@@ -93,6 +93,11 @@ impl UnusedElementsCheck {
         self.visit_expr_for_params(&constraint.right);
     }
 
+    fn visit_order_constraint_unboxed_for_params(&mut self, constraint: &ast::OrderConstraint<ast::Expr>) {
+        self.visit_expr_for_params(&constraint.left);
+        self.visit_expr_for_params(&constraint.right);
+    }
+
     fn visit_port_for_params(&mut self, port: &ast::Port) {
         // Visit access expressions in bundle accesses
         for access in &port.access {
@@ -120,48 +125,59 @@ impl UnusedElementsCheck {
             None => return, // No usage data for this component
         };
 
+        // Collect all warnings first, then sort them for deterministic output
+        let mut warnings = Vec::new();
+
         // Check unused instances
         for (inst_name, def_loc) in &usage.instances {
             if !usage.invoked_instances.contains(inst_name) {
-                self.add_unused_warning(
-                    "instance",
-                    "instance is created but never invoked",
-                    def_loc.pos(),
-                );
+                warnings.push((def_loc.pos(), "instance", "instance is created but never invoked"));
             }
         }
 
         // Check unused invocations (no ports accessed)
         for (inv_name, def_loc) in &usage.invocations {
             if !usage.accessed_invocations.contains(inv_name) {
-                self.add_unused_warning(
-                    "invocation",
-                    "output ports on invocation never used",
-                    def_loc.pos(),
-                );
+                warnings.push((def_loc.pos(), "invocation", "output ports on invocation never used"));
             }
         }
 
         // Check unused let parameters
         for (param_name, def_loc) in &usage.let_params {
             if !usage.referenced_params.contains(param_name) {
-                self.add_unused_warning(
-                    "parameter",
-                    "parameter is defined but never used",
-                    def_loc.pos(),
-                );
+                warnings.push((def_loc.pos(), "parameter", "parameter is defined but never used"));
             }
         }
 
         // Check unused signature parameters
         for (param_name, def_loc) in &usage.sig_params {
             if !usage.referenced_params.contains(param_name) {
-                self.add_unused_warning(
-                    "parameter",
-                    "parameter is defined but never used",
-                    def_loc.pos(),
-                );
+                warnings.push((def_loc.pos(), "parameter", "parameter is defined but never used"));
             }
+        }
+
+        // Sort warnings by position for deterministic output
+        // We can't access PosIdx internals, so sort by element type and description for determinism
+        warnings.sort_by(|(pos_a, type_a, desc_a), (pos_b, type_b, desc_b)| {
+            // First try to compare by type and description for determinism
+            match (type_a, desc_a).cmp(&(type_b, desc_b)) {
+                std::cmp::Ordering::Equal => {
+                    // If types are the same, compare by position hash (not perfect but deterministic in practice)
+                    use std::collections::hash_map::DefaultHasher;
+                    use std::hash::{Hash, Hasher};
+                    let mut hasher_a = DefaultHasher::new();
+                    let mut hasher_b = DefaultHasher::new();
+                    pos_a.hash(&mut hasher_a);
+                    pos_b.hash(&mut hasher_b);
+                    hasher_a.finish().cmp(&hasher_b.finish())
+                }
+                other => other,
+            }
+        });
+
+        // Generate warnings in sorted order
+        for (pos, element_type, description) in warnings {
+            self.add_unused_warning(element_type, description, pos);
         }
     }
 }
@@ -182,6 +198,39 @@ impl Visitor for UnusedElementsCheck {
                 param.name().as_ref().to_string(),
                 param.param.clone(),
             );
+        }
+
+        // Record let-bound parameters from the 'with' section  
+        // First pass: record parameters
+        for sig_bind in &sig.sig_bindings {
+            match sig_bind.inner() {
+                ast::SigBind::Let { param, .. } => {
+                    usage.let_params.insert(
+                        param.inner().as_ref().to_string(),
+                        param.clone(),
+                    );
+                }
+                ast::SigBind::Exists { param, .. } => {
+                    usage.let_params.insert(
+                        param.inner().as_ref().to_string(),
+                        param.clone(),
+                    );
+                }
+            }
+        }
+
+        // Second pass: visit expressions for parameter usage (after usage is populated)
+        for sig_bind in &sig.sig_bindings {
+            match sig_bind.inner() {
+                ast::SigBind::Let { bind, .. } => {
+                    self.visit_expr_for_params(bind);
+                }
+                ast::SigBind::Exists { cons, .. } => {
+                    for constraint in cons {
+                        self.visit_order_constraint_unboxed_for_params(constraint.inner());
+                    }
+                }
+            }
         }
 
         // Don't stop traversal - we need to visit the component body

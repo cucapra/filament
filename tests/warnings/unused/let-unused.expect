@@ -62,16 +62,16 @@ error: unused invocation: output ports on invocation never used
     │       ^^^ invocation defined here
 
 error: unused invocation: output ports on invocation never used
-  ┌─ tests/warnings/unused/unused-param.fil:7:3
+  ┌─ tests/warnings/unused/let-unused.fil:7:3
   │
-7 │   const1 := new Const[USED, 1]<'G>();
-  │   ^^^^^^ invocation defined here
+7 │   const_val := new Const[32, USED_LET]<'G>();
+  │   ^^^^^^^^^ invocation defined here
 
 error: unused parameter: parameter is defined but never used
-  ┌─ tests/warnings/unused/unused-param.fil:4:7
+  ┌─ tests/warnings/unused/let-unused.fil:4:7
   │
-4 │   let UNUSED = 42;
-  │       ^^^^^^ parameter defined here
+4 │   let UNUSED_LET = 42;
+  │       ^^^^^^^^^^ parameter defined here
 
 Compilation failed with 12 errors.
 Run with --show-models to generate assignments for failing constraints.
