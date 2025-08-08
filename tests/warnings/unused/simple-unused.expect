@@ -1,23 +1,35 @@
 ---CODE---
 1
 ---STDERR---
-error: unused instance: instance is created but never invoked
-  ┌─ tests/warnings/unused/simple-unused.fil:8:3
+error: unused parameter: parameter is defined but never used
+  ┌─ tests/warnings/unused/simple-unused.fil:2:8
   │
-8 │   UnusedAdd := new Add[USED_PARAM];
-  │   ^^^^^^^^^ instance defined here
+2 │   some L;
+  │        ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+  ┌─ tests/warnings/unused/simple-unused.fil:1:19
+  │
+1 │ comp Add[D, I, W, U]<'G:D>() -> (out: ['G, 'G+I] W) with {
+  │                   ^ parameter defined here
+
+error: unused instance: instance is created but never invoked
+   ┌─ tests/warnings/unused/simple-unused.fil:10:3
+   │
+10 │   UnusedAdd := new Add[USED_PARAM];
+   │   ^^^^^^^^^ instance defined here
 
 error: unused invocation: output ports on invocation never used
-   ┌─ tests/warnings/unused/simple-unused.fil:12:3
+   ┌─ tests/warnings/unused/simple-unused.fil:14:3
    │
-12 │   unused_invoke := UsedAdd<'G>();
+14 │   unused_invoke := UsedAdd<'G>();
    │   ^^^^^^^^^^^^^ invocation defined here
 
 error: unused parameter: parameter is defined but never used
-  ┌─ tests/warnings/unused/simple-unused.fil:4:7
+  ┌─ tests/warnings/unused/simple-unused.fil:6:7
   │
-4 │   let UNUSED_PARAM = 32;
+6 │   let UNUSED_PARAM = 32;
   │       ^^^^^^^^^^^^ parameter defined here
 
-Compilation failed with 3 errors.
+Compilation failed with 5 errors.
 Run with --show-models to generate assignments for failing constraints.

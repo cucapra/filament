@@ -1,4 +1,6 @@
-comp Add[P]<'G:1>() -> (out: ['G, 'G+1] P) {}
+comp Add[D, I, W, U]<'G:D>() -> (out: ['G, 'G+I] W) with {
+  some L;
+} {}
 
 comp main<'G:1>() -> (out: ['G, 'G+1] 32) with {
   let UNUSED_PARAM = 32;
@@ -10,7 +12,7 @@ comp main<'G:1>() -> (out: ['G, 'G+1] 32) with {
   // Used instance but unused invocation 
   UsedAdd := new Add[USED_PARAM];
   unused_invoke := UsedAdd<'G>();
-  
+ 
   // Actually used
   used_invoke := UsedAdd<'G>();
   out = used_invoke.out;
