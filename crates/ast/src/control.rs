@@ -4,7 +4,7 @@ use super::{
 use fil_utils::PortAttrs;
 use struct_variant::struct_variant;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// Access into a bundle
 pub struct Access {
     pub start: Expr,
@@ -33,39 +33,92 @@ impl From<Expr> for Access {
     }
 }
 
-/// A port mentioned in the program
-// XXX(rachit): the bundle and non-bundle variants can be unified because
-// astconv treats them the same anyways.
-#[derive(Clone)]
-pub enum Port {
-    /// A port on this component
-    This(Loc<Id>),
-    /// A port on an invoke
-    InvPort { invoke: Loc<Id>, name: Loc<Id> },
-    /// A port represented by an index into a bundle
-    Bundle {
-        name: Loc<Id>,
-        access: Vec<Loc<Access>>,
-    },
-    /// A bundle port on an invocation
-    InvBundle {
-        invoke: Loc<Id>,
-        port: Loc<Id>,
-        access: Vec<Loc<Access>>,
-    },
+impl std::fmt::Display for Access {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // For now, always show as range. Could add logic to detect single indices.
+        write!(f, "{}:{}", self.start, self.end)
+    }
+}
+
+/// Unified port representation
+#[derive(Clone, Debug)]
+pub struct Port {
+    /// Base port reference
+    pub base: PortRef,
+    /// Optional array/bundle access
+    pub access: Vec<Loc<Access>>,
+    /// Source location for error reporting
+    pub loc: fil_utils::GPosIdx,
+}
+
+/// Base port reference
+#[derive(Clone, Debug, PartialEq)]
+pub enum PortRef {
+    /// Reference to a port on 'this' component
+    This { port: Loc<Id> },
+    /// Reference to a port on an instance or invoke
+    Instance { instance: Loc<Id>, port: Loc<Id> },
 }
 
 impl Port {
+    /// Create a simple port reference (this.port)
+    pub fn this_port(port: Loc<Id>) -> Self {
+        let loc = port.pos();
+        Port {
+            base: PortRef::This { port },
+            access: Vec::new(),
+            loc,
+        }
+    }
+
+    /// Create an instance port reference (inst.port)
+    pub fn instance_port(instance: Loc<Id>, port: Loc<Id>) -> Self {
+        let loc = instance.pos(); // Using first location, could union if needed
+        Port {
+            base: PortRef::Instance { instance, port },
+            access: Vec::new(),
+            loc,
+        }
+    }
+
+    /// Add array/bundle access to a port
+    pub fn with_access(mut self, access: Vec<Loc<Access>>) -> Self {
+        self.access = access;
+        self
+    }
+
+    /// Check if this is a bundle access
+    pub fn is_bundle(&self) -> bool {
+        !self.access.is_empty()
+    }
+
+    /// Get the instance name if this is an instance port
+    pub fn instance(&self) -> Option<&Loc<Id>> {
+        match &self.base {
+            PortRef::Instance { instance, .. } => Some(instance),
+            _ => None,
+        }
+    }
+
+    /// Get the port name
+    pub fn port_name(&self) -> &Loc<Id> {
+        match &self.base {
+            PortRef::This { port } => port,
+            PortRef::Instance { port, .. } => port,
+        }
+    }
+
+    // Legacy constructors for backwards compatibility during migration
     pub fn inv_port(comp: Loc<Id>, name: Loc<Id>) -> Self {
-        Port::InvPort { invoke: comp, name }
+        Self::instance_port(comp, name)
     }
 
     pub fn this(p: Loc<Id>) -> Self {
-        Port::This(p)
+        Self::this_port(p)
     }
 
     pub fn bundle(name: Loc<Id>, access: Vec<Loc<Access>>) -> Self {
-        Port::Bundle { name, access }
+        Self::this_port(name).with_access(access)
     }
 
     pub fn inv_bundle(
@@ -73,36 +126,35 @@ impl Port {
         port: Loc<Id>,
         access: Vec<Loc<Access>>,
     ) -> Self {
-        Port::InvBundle {
-            invoke,
-            port,
-            access,
-        }
+        Self::instance_port(invoke, port).with_access(access)
     }
 
-    pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
-        match self {
-            Port::Bundle { name, access } => Port::Bundle {
-                name,
-                access: access
-                    .into_iter()
-                    .map(|i| i.map(|i| i.resolve(bindings)))
-                    .collect(),
-            },
-            Port::InvBundle {
-                invoke,
-                port,
-                access,
-            } => Port::InvBundle {
-                invoke,
-                port,
-                access: access
-                    .into_iter()
-                    .map(|i| i.map(|a| a.resolve(bindings)))
-                    .collect(),
-            },
-            _ => self,
+    pub fn resolve_exprs(mut self, bindings: &Binding<Expr>) -> Self {
+        if !self.access.is_empty() {
+            self.access = self
+                .access
+                .into_iter()
+                .map(|i| i.map(|i| i.resolve(bindings)))
+                .collect();
         }
+        self
+    }
+}
+
+impl std::fmt::Display for Port {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.base {
+            PortRef::This { port } => write!(f, "{}", port),
+            PortRef::Instance { instance, port } => {
+                write!(f, "{}.{}", instance, port)
+            }
+        }?;
+
+        for access in &self.access {
+            write!(f, "{{{}}}", access)?;
+        }
+
+        Ok(())
     }
 }
 
