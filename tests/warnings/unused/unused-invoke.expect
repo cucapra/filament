@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: unused invocation: output ports on invocation never used
+  ┌─ tests/warnings/unused/unused-invoke.fil:7:3
+  │
+7 │   adder := new Add[32]<'G>(in1, in2);
+  │   ^^^^^ invocation defined here
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -58,6 +58,7 @@ fn collect_known_pass_names() -> Vec<String> {
 
     // AST pass names
     add_ast_pass::<ap::TopLevel>(&mut pass_names);
+    add_ast_pass::<ap::UnusedElementsCheck>(&mut pass_names);
 
     pass_names.sort();
     pass_names.dedup();
@@ -124,6 +125,11 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
 
     ast_pass_pipeline! { opts, ns; ap::TopLevel };
+    
+    // Run unused elements check only if warnings are not disabled
+    if !opts.no_warn_unused {
+        ast_pass_pipeline! { opts, ns; ap::UnusedElementsCheck };
+    }
 
     // Set the parameter bindings for the top-level component
     if let Some(main) = ns.toplevel() {

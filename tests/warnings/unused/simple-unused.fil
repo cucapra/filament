@@ -1,0 +1,16 @@
+comp Add<'G:1>() -> () {}
+
+comp main<'G:1>() -> () with {
+  let UNUSED_PARAM = 42;
+  let USED_PARAM = 10;
+} {
+  // Unused instance - never invoked
+  UnusedAdd := new Add;
+  
+  // Used instance but unused invocation 
+  UsedAdd := new Add;
+  unused_invoke := UsedAdd<'G>();
+  
+  // Actually used
+  used_invoke := UsedAdd<'G>();
+}

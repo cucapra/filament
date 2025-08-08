@@ -1,0 +1,77 @@
+---CODE---
+1
+---STDERR---
+error: unused parameter: parameter is defined but never used
+   ┌─ ./primitives/reshape.fil:25:32
+   │
+25 │ comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
+   │                                ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+   ┌─ ./primitives/reshape.fil:25:19
+   │
+25 │ comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
+   │                   ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+   ┌─ ./primitives/reshape.fil:25:26
+   │
+25 │ comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
+   │                          ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+   ┌─ ./primitives/reshape.fil:75:21
+   │
+75 │ comp Deserialize[W, N, B, ?C=1, ?H=1]<'G: End-1>(
+   │                     ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+   ┌─ ./primitives/reshape.fil:75:34
+   │
+75 │ comp Deserialize[W, N, B, ?C=1, ?H=1]<'G: End-1>(
+   │                                  ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+   ┌─ ./primitives/reshape.fil:75:28
+   │
+75 │ comp Deserialize[W, N, B, ?C=1, ?H=1]<'G: End-1>(
+   │                            ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+    ┌─ ./primitives/reshape.fil:107:23
+    │
+107 │ comp Downsample[N, M, L, W]<'G: (M-N)*L>(
+    │                       ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+    ┌─ ./primitives/reshape.fil:107:20
+    │
+107 │ comp Downsample[N, M, L, W]<'G: (M-N)*L>(
+    │                    ^ parameter defined here
+
+error: unused parameter: parameter is defined but never used
+    ┌─ ./primitives/reshape.fil:107:17
+    │
+107 │ comp Downsample[N, M, L, W]<'G: (M-N)*L>(
+    │                 ^ parameter defined here
+
+error: unused invocation: output ports on invocation never used
+    ┌─ ./primitives/reshape.fil:134:7
+    │
+134 │       red := new ConcatBundle[W, N-1, L]<'G>(in{1..N});
+    │       ^^^ invocation defined here
+
+error: unused invocation: output ports on invocation never used
+    ┌─ ./primitives/reshape.fil:154:7
+    │
+154 │       rem := new Slice[W*N, W*(N-1)-1, 0]<'G, 'G+L>(in);
+    │       ^^^ invocation defined here
+
+error: unused invocation: output ports on invocation never used
+  ┌─ tests/warnings/unused/unused-param.fil:7:3
+  │
+7 │   const1 := new Const[USED, 1]<'G>();
+  │   ^^^^^^ invocation defined here
+
+Compilation failed with 12 errors.
+Run with --show-models to generate assignments for failing constraints.

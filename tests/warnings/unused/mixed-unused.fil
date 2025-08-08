@@ -1,0 +1,23 @@
+import "primitives/comb.fil";
+
+comp Helper<'G:1>() -> () {}
+
+comp main<'G:1>(
+  in1: ['G, 'G+1] 32,
+  in2: ['G, 'G+1] 32
+) -> (
+  out: ['G, 'G+1] 32
+) with {
+  let UNUSED_PARAM = 100;
+  let USED_PARAM = 32;
+} {
+  // Unused instance
+  helper := new Helper;
+  
+  // Used instance, but invocation result unused
+  adder := new Add[USED_PARAM]<'G>(in1, in2);
+  
+  // Actually used invocation
+  adder2 := new Add[32]<'G>(in1, in2);
+  out = adder2.out;
+}

@@ -129,4 +129,12 @@ pub struct Opts {
     /// use bitvector encoding for proofs
     #[argh(option, long = "solver-bv")]
     pub solver_bv: Option<u8>,
+
+    /// disable unused element warnings
+    #[argh(switch, long = "no-warn-unused")]
+    pub no_warn_unused: bool,
+
+    /// treat all warnings as errors
+    #[argh(switch, long = "warnings-as-errors")]
+    pub warnings_as_errors: bool,
 }

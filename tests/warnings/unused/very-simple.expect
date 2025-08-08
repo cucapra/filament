@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: unused instance: instance is created but never invoked
+  ┌─ tests/warnings/unused/very-simple.fil:7:3
+  │
+7 │   UnusedAdd := new Add;
+  │   ^^^^^^^^^ instance defined here
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
