@@ -125,7 +125,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
 
     ast_pass_pipeline! { opts, ns; ap::TopLevel };
-    
+
     // Run unused elements check only if warnings are not disabled
     if !opts.no_warn_unused {
         ast_pass_pipeline! { opts, ns; ap::UnusedElementsCheck };

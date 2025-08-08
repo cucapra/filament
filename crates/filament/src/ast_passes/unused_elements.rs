@@ -12,13 +12,12 @@ struct ComponentUsage {
     invocations: HashMap<String, ast::Loc<fil_utils::Id>>,
     let_params: HashMap<String, ast::Loc<fil_utils::Id>>,
     sig_params: HashMap<String, ast::Loc<fil_utils::Id>>,
-    
+
     // Usage tracking
     invoked_instances: HashSet<String>,
     accessed_invocations: HashSet<String>,
     referenced_params: HashSet<String>,
 }
-
 
 /// Check for unused elements in AST (instances, invocations, parameters)
 pub struct UnusedElementsCheck {
@@ -46,7 +45,10 @@ impl crate::ast_visitor::Construct for UnusedElementsCheck {
 
 impl UnusedElementsCheck {
     fn current_usage(&mut self) -> &mut ComponentUsage {
-        let comp_name = self.current_component.clone().expect("No current component");
+        let comp_name = self
+            .current_component
+            .clone()
+            .expect("No current component");
         self.component_usage.entry(comp_name).or_default()
     }
 
@@ -63,11 +65,15 @@ impl UnusedElementsCheck {
         match expr {
             ast::Expr::Abstract(name) => {
                 let usage = self.current_usage();
-                usage.referenced_params.insert(name.inner().as_ref().to_string());
+                usage
+                    .referenced_params
+                    .insert(name.inner().as_ref().to_string());
             }
             ast::Expr::ParamAccess { inst: _, param } => {
                 let usage = self.current_usage();
-                usage.referenced_params.insert(param.inner().as_ref().to_string());
+                usage
+                    .referenced_params
+                    .insert(param.inner().as_ref().to_string());
             }
             ast::Expr::Op { left, right, .. } => {
                 self.visit_expr_for_params(left);
@@ -88,12 +94,18 @@ impl UnusedElementsCheck {
         }
     }
 
-    fn visit_order_constraint_for_params(&mut self, constraint: &ast::OrderConstraint<Box<ast::Expr>>) {
+    fn visit_order_constraint_for_params(
+        &mut self,
+        constraint: &ast::OrderConstraint<Box<ast::Expr>>,
+    ) {
         self.visit_expr_for_params(&constraint.left);
         self.visit_expr_for_params(&constraint.right);
     }
 
-    fn visit_order_constraint_unboxed_for_params(&mut self, constraint: &ast::OrderConstraint<ast::Expr>) {
+    fn visit_order_constraint_unboxed_for_params(
+        &mut self,
+        constraint: &ast::OrderConstraint<ast::Expr>,
+    ) {
         self.visit_expr_for_params(&constraint.left);
         self.visit_expr_for_params(&constraint.right);
     }
@@ -106,9 +118,17 @@ impl UnusedElementsCheck {
         }
     }
 
-    fn add_unused_warning(&mut self, element_type: &str, description: &str, loc: GPosIdx) {
+    fn add_unused_warning(
+        &mut self,
+        element_type: &str,
+        description: &str,
+        loc: GPosIdx,
+    ) {
         let mut warning = Error::unused_element(element_type, description)
-            .add_note(self.diag.add_info(format!("{} defined here", element_type), loc));
+            .add_note(
+                self.diag
+                    .add_info(format!("{} defined here", element_type), loc),
+            );
 
         // Promote to error if flag is set
         if self.warnings_as_errors {
@@ -131,28 +151,44 @@ impl UnusedElementsCheck {
         // Check unused instances
         for (inst_name, def_loc) in &usage.instances {
             if !usage.invoked_instances.contains(inst_name) {
-                warnings.push((def_loc.pos(), "instance", "instance is created but never invoked"));
+                warnings.push((
+                    def_loc.pos(),
+                    "instance",
+                    "instance is created but never invoked",
+                ));
             }
         }
 
         // Check unused invocations (no ports accessed)
         for (inv_name, def_loc) in &usage.invocations {
             if !usage.accessed_invocations.contains(inv_name) {
-                warnings.push((def_loc.pos(), "invocation", "output ports on invocation never used"));
+                warnings.push((
+                    def_loc.pos(),
+                    "invocation",
+                    "output ports on invocation never used",
+                ));
             }
         }
 
         // Check unused let parameters
         for (param_name, def_loc) in &usage.let_params {
             if !usage.referenced_params.contains(param_name) {
-                warnings.push((def_loc.pos(), "parameter", "parameter is defined but never used"));
+                warnings.push((
+                    def_loc.pos(),
+                    "parameter",
+                    "parameter is defined but never used",
+                ));
             }
         }
 
         // Check unused signature parameters
         for (param_name, def_loc) in &usage.sig_params {
             if !usage.referenced_params.contains(param_name) {
-                warnings.push((def_loc.pos(), "parameter", "parameter is defined but never used"));
+                warnings.push((
+                    def_loc.pos(),
+                    "parameter",
+                    "parameter is defined but never used",
+                ));
             }
         }
 
@@ -190,17 +226,16 @@ impl Visitor for UnusedElementsCheck {
     fn signature(&mut self, sig: &mut ast::Signature) -> Action {
         let comp_name = sig.name.inner().as_ref().to_string();
         self.current_component = Some(comp_name.clone());
-        
+
         // Record signature parameters
         let usage = self.current_usage();
         for param in &sig.params {
-            usage.sig_params.insert(
-                param.name().as_ref().to_string(),
-                param.param.clone(),
-            );
+            usage
+                .sig_params
+                .insert(param.name().as_ref().to_string(), param.param.clone());
         }
 
-        // Record let-bound parameters from the 'with' section  
+        // Record let-bound parameters from the 'with' section
         // First pass: record parameters
         for sig_bind in &sig.sig_bindings {
             match sig_bind.inner() {
@@ -227,7 +262,9 @@ impl Visitor for UnusedElementsCheck {
                 }
                 ast::SigBind::Exists { cons, .. } => {
                     for constraint in cons {
-                        self.visit_order_constraint_unboxed_for_params(constraint.inner());
+                        self.visit_order_constraint_unboxed_for_params(
+                            constraint.inner(),
+                        );
                     }
                 }
             }
@@ -239,10 +276,9 @@ impl Visitor for UnusedElementsCheck {
 
     fn instance(&mut self, inst: &mut ast::Instance) -> Action {
         let usage = self.current_usage();
-        usage.instances.insert(
-            inst.name.inner().as_ref().to_string(),
-            inst.name.clone(),
-        );
+        usage
+            .instances
+            .insert(inst.name.inner().as_ref().to_string(), inst.name.clone());
 
         // Visit parameter expressions for parameter usage
         for param_expr in &inst.params {
@@ -254,17 +290,16 @@ impl Visitor for UnusedElementsCheck {
 
     fn invoke(&mut self, inv: &mut ast::Invoke) -> Action {
         let usage = self.current_usage();
-        
+
         // Record invocation definition
-        usage.invocations.insert(
-            inv.name.inner().as_ref().to_string(),
-            inv.name.clone(),
-        );
-        
+        usage
+            .invocations
+            .insert(inv.name.inner().as_ref().to_string(), inv.name.clone());
+
         // Mark the instance as being invoked
-        usage.invoked_instances.insert(
-            inv.instance.inner().as_ref().to_string()
-        );
+        usage
+            .invoked_instances
+            .insert(inv.instance.inner().as_ref().to_string());
 
         // Visit port expressions for parameter usage
         for port in &inv.ports {

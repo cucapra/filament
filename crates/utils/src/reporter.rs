@@ -93,7 +93,10 @@ impl Diagnostics {
 
     /// Add a warning to the diagnostics instance.
     pub fn add_warning(&mut self, warning: Error) {
-        let warning = Error { severity: Severity::Warning, ..warning };
+        let warning = Error {
+            severity: Severity::Warning,
+            ..warning
+        };
         self.add_error(warning);
     }
 
@@ -106,16 +109,17 @@ impl Diagnostics {
         } else {
             ColorChoice::Never
         });
-        
+
         // Take ownership to avoid borrowing issues
         let warnings = std::mem::take(&mut self.warnings);
         let errors = std::mem::take(&mut self.errors);
-        
+
         // Report warnings first
         self.report_diagnostics_owned(&writer, warnings, Severity::Warning);
-        
+
         // Report errors and return count
-        let error_count = self.report_diagnostics_owned(&writer, errors, Severity::Error);
+        let error_count =
+            self.report_diagnostics_owned(&writer, errors, Severity::Error);
 
         if error_count > 0 {
             Some(error_count)
@@ -124,7 +128,12 @@ impl Diagnostics {
         }
     }
 
-    fn report_diagnostics_owned(&self, writer: &StandardStream, mut diagnostics: Vec<Error>, severity: Severity) -> u64 {
+    fn report_diagnostics_owned(
+        &self,
+        writer: &StandardStream,
+        mut diagnostics: Vec<Error>,
+        severity: Severity,
+    ) -> u64 {
         if diagnostics.is_empty() {
             return 0;
         }
@@ -173,8 +182,12 @@ impl Diagnostics {
             let msg = if messages.len() > 1 {
                 notes.extend(messages.iter().map(|e| e.to_string()));
                 match severity {
-                    Severity::Error => "Multiple errors encountered".to_string(),
-                    Severity::Warning => "Multiple warnings encountered".to_string(),
+                    Severity::Error => {
+                        "Multiple errors encountered".to_string()
+                    }
+                    Severity::Warning => {
+                        "Multiple warnings encountered".to_string()
+                    }
                 }
             } else {
                 messages[0].to_string()
@@ -185,7 +198,7 @@ impl Diagnostics {
                 Severity::Error => Diagnostic::error(),
                 Severity::Warning => Diagnostic::warning(),
             };
-            
+
             term::emit(
                 &mut writer.lock(),
                 &term::Config::default(),

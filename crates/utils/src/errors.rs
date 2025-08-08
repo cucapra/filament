@@ -99,9 +99,16 @@ impl Error {
         }
     }
 
-    pub fn unused_element<S: ToString>(element_type: S, description: S) -> Self {
+    pub fn unused_element<S: ToString>(
+        element_type: S,
+        description: S,
+    ) -> Self {
         Self {
-            kind: format!("unused {}: {}", element_type.to_string(), description.to_string()),
+            kind: format!(
+                "unused {}: {}",
+                element_type.to_string(),
+                description.to_string()
+            ),
             notes: vec![],
             severity: Severity::Warning,
         }
