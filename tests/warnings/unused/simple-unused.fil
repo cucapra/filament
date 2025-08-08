@@ -1,14 +1,14 @@
-comp Add<'G:1>() -> (out: ['G, 'G+1] 32) {}
+comp Add[P]<'G:1>() -> (out: ['G, 'G+1] P) {}
 
 comp main<'G:1>() -> (out: ['G, 'G+1] 32) with {
-  let UNUSED_PARAM = 42;
+  let UNUSED_PARAM = 32;
   let USED_PARAM = 10;
 } {
   // Unused instance - never invoked
-  UnusedAdd := new Add;
+  UnusedAdd := new Add[USED_PARAM];
   
   // Used instance but unused invocation 
-  UsedAdd := new Add;
+  UsedAdd := new Add[USED_PARAM];
   unused_invoke := UsedAdd<'G>();
   
   // Actually used

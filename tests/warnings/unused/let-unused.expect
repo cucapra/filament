@@ -1,54 +1,6 @@
 ---CODE---
 1
 ---STDERR---
-error: unused parameter: parameter is defined but never used
-   ┌─ ./primitives/reshape.fil:32:9
-   │
-32 │     let Tot = N*B;
-   │         ^^^ parameter defined here
-
-error: unused parameter: parameter is defined but never used
-   ┌─ ./primitives/reshape.fil:25:32
-   │
-25 │ comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
-   │                                ^ parameter defined here
-
-error: unused parameter: parameter is defined but never used
-   ┌─ ./primitives/reshape.fil:25:26
-   │
-25 │ comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
-   │                          ^ parameter defined here
-
-error: unused parameter: parameter is defined but never used
-   ┌─ ./primitives/reshape.fil:83:9
-   │
-83 │     let End = Start+H;
-   │         ^^^ parameter defined here
-
-error: unused parameter: parameter is defined but never used
-   ┌─ ./primitives/reshape.fil:81:9
-   │
-81 │     let Tot = N*B;
-   │         ^^^ parameter defined here
-
-error: unused parameter: parameter is defined but never used
-    ┌─ ./primitives/reshape.fil:107:23
-    │
-107 │ comp Downsample[N, M, L, W]<'G: (M-N)*L>(
-    │                       ^ parameter defined here
-
-error: unused parameter: parameter is defined but never used
-    ┌─ ./primitives/reshape.fil:107:17
-    │
-107 │ comp Downsample[N, M, L, W]<'G: (M-N)*L>(
-    │                 ^ parameter defined here
-
-error: unused parameter: parameter is defined but never used
-    ┌─ ./primitives/reshape.fil:107:20
-    │
-107 │ comp Downsample[N, M, L, W]<'G: (M-N)*L>(
-    │                    ^ parameter defined here
-
 error: unused invocation: output ports on invocation never used
     ┌─ ./primitives/reshape.fil:134:7
     │
@@ -73,5 +25,5 @@ error: unused parameter: parameter is defined but never used
 4 │   let UNUSED_LET = 42;
   │       ^^^^^^^^^^ parameter defined here
 
-Compilation failed with 12 errors.
+Compilation failed with 4 errors.
 Run with --show-models to generate assignments for failing constraints.

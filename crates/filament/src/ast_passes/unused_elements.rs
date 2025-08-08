@@ -118,6 +118,43 @@ impl UnusedElementsCheck {
         }
     }
 
+    fn visit_bundle_type_for_params(&mut self, bundle_type: &ast::BundleType) {
+        // Visit length expressions
+        for len in &bundle_type.len {
+            self.visit_expr_for_params(len.inner());
+        }
+
+        // Visit bitwidth expression (this is where 'P' would be used in "['G, 'G+1] P")
+        self.visit_expr_for_params(bundle_type.bitwidth.inner());
+
+        // Visit liveness range expressions
+        self.visit_range_for_params(bundle_type.liveness.inner());
+    }
+
+    fn visit_range_for_params(&mut self, range: &ast::Range) {
+        self.visit_time_for_params(&range.start);
+        self.visit_time_for_params(&range.end);
+    }
+
+    fn visit_time_for_params(&mut self, time: &ast::Time) {
+        // Time is just event + offset, visit the offset expression
+        self.visit_expr_for_params(&time.offset);
+    }
+
+    fn visit_time_sub_for_params(&mut self, time_sub: &ast::TimeSub) {
+        match time_sub {
+            ast::TimeSub::Unit(expr) => {
+                // Visit the expression in Unit variant
+                self.visit_expr_for_params(expr);
+            }
+            ast::TimeSub::Sym { l, r } => {
+                // Visit both time expressions in symbolic difference
+                self.visit_time_for_params(l);
+                self.visit_time_for_params(r);
+            }
+        }
+    }
+
     fn add_unused_warning(
         &mut self,
         element_type: &str,
@@ -268,6 +305,24 @@ impl Visitor for UnusedElementsCheck {
                     }
                 }
             }
+        }
+
+        // Third pass: visit port definitions for parameter usage in widths, liveness, etc.
+        for port_def in &sig.ports {
+            self.visit_bundle_type_for_params(&port_def.inner().typ);
+        }
+
+        // Visit event bindings for parameter usage in delays
+        for event_bind in &sig.events {
+            self.visit_time_sub_for_params(event_bind.inner().delay.inner());
+            if let Some(default_time) = &event_bind.inner().default {
+                self.visit_time_for_params(default_time);
+            }
+        }
+
+        // Visit parameter constraints
+        for constraint in &sig.param_constraints {
+            self.visit_order_constraint_unboxed_for_params(constraint.inner());
         }
 
         // Don't stop traversal - we need to visit the component body
