@@ -11,18 +11,23 @@ use fil_utils as utils;
 use itertools::Itertools;
 use std::collections::HashMap;
 
-pub type PortInfo =
-    (/*lens=*/ Vec<usize>, /*gen_ports=*/ Vec<PortIdx>);
+/// A mapping from a bundle with a list of dimensions to the list of associated ports.
+struct PortInfo {
+    /// The lengths of the original bundles
+    lens: Vec<usize>,
+    /// Ports associated with this signature port
+    ports: Vec<PortIdx>,
+}
+
+/// A multi-dimensional index into a possibly multi-dimensional bundle port).
+type BundleIdx = (PortIdx, Vec<usize>);
 
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
     /// Mapping from component to the map from signature bundle port to generated port.
     context: DenseIndexInfo<Component, SparseInfoMap<Port, PortInfo>>,
     /// Mapping from index into a dst port to an index of the src port.
-    local_map: HashMap<
-        (PortIdx, /*idxs=*/ Vec<usize>),
-        (PortIdx, /*idxs=*/ Vec<usize>),
-    >,
+    local_map: HashMap<BundleIdx, BundleIdx>,
 }
 
 impl BundleElim {
@@ -54,7 +59,10 @@ impl BundleElim {
                     None => break group,
                 }
             };
-            let (lens, sig_ports) = &comp_info[*port];
+            let PortInfo {
+                lens,
+                ports: sig_ports,
+            } = &comp_info[*port];
             ports.push(sig_ports[utils::flat_idx(idxs, lens)])
         }
 
@@ -90,7 +98,10 @@ impl BundleElim {
             );
 
             // need to preserve the original portidx here to save the source information.
-            return (lens, vec![pidx]);
+            return PortInfo {
+                lens,
+                ports: vec![pidx],
+            };
         }
 
         // creates the info to be cloned later.
@@ -138,7 +149,7 @@ impl BundleElim {
                             base: Foreign::new(
                                 // maps the foreign to the corresponding single port
                                 // this works because all signature ports are compiled first.
-                                self.context[owner][key].1[i],
+                                self.context[owner][key].ports[i],
                                 owner,
                             ),
                         }
@@ -180,7 +191,8 @@ impl BundleElim {
         for idx in idxs {
             comp.delete(idx);
         }
-        (lens, ports)
+
+        PortInfo { lens, ports }
     }
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
@@ -212,8 +224,11 @@ impl BundleElim {
             .collect_vec();
 
         // add them back to the invoke (need to get mutably again because comp is mutated above)
-        comp.get_mut(idx).ports =
-            mappings.iter().flat_map(|(_, (_, v))| v).copied().collect();
+        comp.get_mut(idx).ports = mappings
+            .iter()
+            .flat_map(|(_, PortInfo { ports, .. })| ports)
+            .copied()
+            .collect();
 
         mappings.into_iter().collect()
     }
@@ -227,7 +242,8 @@ impl Construct for BundleElim {
         };
         // compiles signature ports and adds them to the context
         for (idx, c) in ctx.comps.iter_mut() {
-            visitor.context.push(idx, visitor.sig(c));
+            let sigmap = visitor.sig(c);
+            visitor.context.push(idx, sigmap);
         }
 
         visitor
@@ -293,6 +309,16 @@ impl Visitor for BundleElim {
     ) -> Action {
         // Remove all bundle definitions
         Action::Change(vec![])
+    }
+
+    /// Discard all bundle-based assumptions/assertions
+    fn fact(&mut self, f: &mut fil_ir::Fact, data: &mut VisitorData) -> Action {
+        if !f.prop.valid(&data.comp) {
+            // This fact depends on a bundle parameter, so it must be invalidated
+            Action::Change(vec![])
+        } else {
+            Action::Continue
+        }
     }
 
     /// Compiles the body of a component and replaces all ports with their expanded versions.

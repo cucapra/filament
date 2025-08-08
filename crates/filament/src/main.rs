@@ -5,7 +5,8 @@ use fil_ir as ir;
 use filament::ir_passes::BuildDomination;
 use filament::{ast_pass_pipeline, ir_pass_pipeline, log_pass, log_time};
 use filament::{
-    ast_passes as ap, cmdline, ir_passes as ip, resolver::Resolver,
+    ast_passes as ap, ast_visitor::Visitor as AstVisitor, cmdline,
+    ir_passes as ip, ir_visitor::Visitor as IrVisitor, resolver::Resolver,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -21,6 +22,75 @@ pub struct ProvidedBindings {
     params: HashMap<String, Vec<u64>>,
 }
 
+/// Helper function to add IR pass names to the collection
+fn add_ir_pass<P: IrVisitor>(pass_names: &mut Vec<String>) {
+    pass_names.push(P::name().to_string());
+}
+
+/// Helper function to add AST pass names to the collection
+fn add_ast_pass<P: AstVisitor>(pass_names: &mut Vec<String>) {
+    pass_names.push(P::name().to_string());
+}
+
+/// Collects all known pass names by calling name() on each pass type
+/// and including hardcoded pass names from log_pass! calls
+fn collect_known_pass_names() -> Vec<String> {
+    let mut pass_names = vec![
+        // Hardcoded pass names from log_pass! calls
+        "astconv".to_string(),
+        "monomorphize".to_string(),
+        // Pass name from log_time! call
+        "compile".to_string(),
+    ];
+
+    // IR pass names - call name() method on each pass type
+    add_ir_pass::<ip::Assumptions>(&mut pass_names);
+    add_ir_pass::<ip::BuildDomination>(&mut pass_names);
+    add_ir_pass::<ip::TypeCheck>(&mut pass_names);
+    add_ir_pass::<ip::IntervalCheck>(&mut pass_names);
+    add_ir_pass::<ip::PhantomCheck>(&mut pass_names);
+    add_ir_pass::<ip::InferAssumes>(&mut pass_names);
+    add_ir_pass::<ip::Discharge>(&mut pass_names);
+    add_ir_pass::<ip::FSMAttributes>(&mut pass_names);
+    add_ir_pass::<ip::Simplify>(&mut pass_names);
+    add_ir_pass::<ip::AssignCheck>(&mut pass_names);
+    add_ir_pass::<ip::BundleElim>(&mut pass_names);
+
+    // AST pass names
+    add_ast_pass::<ap::TopLevel>(&mut pass_names);
+
+    pass_names.sort();
+    pass_names.dedup();
+    pass_names
+}
+
+/// Validates that all --dump-after pass names are known passes
+fn validate_dump_after_passes(opts: &cmdline::Opts) -> Result<(), String> {
+    if opts.dump_after.is_empty() {
+        return Ok(());
+    }
+
+    let known_passes = collect_known_pass_names();
+    let mut unknown_passes = Vec::new();
+
+    for pass_name in &opts.dump_after {
+        if !known_passes.contains(pass_name) {
+            unknown_passes.push(pass_name.clone());
+        }
+    }
+
+    if !unknown_passes.is_empty() {
+        let error_msg = format!(
+            "Unknown pass name(s): {}\nKnown passes are: {}",
+            unknown_passes.join(", "),
+            known_passes.join(", ")
+        );
+        return Err(error_msg);
+    }
+
+    Ok(())
+}
+
 // Prints out the interface for main component in the input program.
 fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     // enable tracing
@@ -31,6 +101,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         .filter_level(opts.log_level)
         .target(env_logger::Target::Stderr)
         .init();
+
+    // Validate --dump-after pass names
+    if let Err(e) = validate_dump_after_passes(opts) {
+        eprintln!("Error: {}", e);
+        return Err(1);
+    }
 
     // Load the provided bindings
     let provided_bindings: ProvidedBindings = opts
@@ -77,11 +153,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     // Transform AST to IR
     let mut ir = log_pass! { opts; ir::transform(ns)?, "astconv" };
     ir_pass_pipeline! {opts, ir;
+        ip::Assumptions,
         ip::BuildDomination,
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume
+        ip::InferAssumes
     }
     if !opts.unsafe_skip_discharge {
         ir_pass_pipeline! {opts, ir; ip::Discharge }
@@ -99,11 +176,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     }
     // type check again before lowering
     ir_pass_pipeline! {opts, ir;
+        ip::Assumptions,
         ip::BuildDomination,
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume
+        ip::InferAssumes
     }
     if !opts.unsafe_skip_discharge {
         ir_pass_pipeline! {opts, ir; ip::Discharge }
@@ -120,7 +198,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         return Ok(());
     }
     let calyx =
-        log_time!(ip::Compile::compile(ir, opts.preserve_names), "compile");
+        log_time!(ip::Compile::compile(ir, !opts.no_preserve_names), "compile");
     match opts.backend {
         cmdline::Backend::Verilog => {
             gen_verilog(calyx).unwrap();

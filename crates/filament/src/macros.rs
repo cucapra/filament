@@ -64,7 +64,8 @@ macro_rules! ir_pass_pipeline {
         $(
             let name = <$pass as $crate::ir_visitor::Visitor>::name();
             $crate::log_time!(<$pass as $crate::ir_visitor::Visitor>::do_pass($opts, &mut $ir)?, name);
-            if $opts.dump_after.contains(&name.to_string()) {
+            if $opts.dump_after.contains(&name.to_string()) || $opts.dump_all {
+                println!("=== After pass: {} ===", name);
                 ::fil_ir::Printer::context(& $ir, &mut std::io::stdout()).unwrap()
             }
         )*
