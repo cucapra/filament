@@ -17,7 +17,7 @@ Next, we can install the dependencies for the Filament compiler:
 
 To check that the compiler works, run the following command:
 ```
-cargo run -- tests/compile/par.fil
+cargo run -- tests/run/add.fil
 ```
 Which should generate the Verilog implementing the original program.
 
@@ -32,7 +32,7 @@ Calyx tools are provided using a docker image:
 docker run -it ghcr.io/cucapra/calyx:0.4.0
 ```
 
-If you're using the container, skip to [configuring Filament tools][#configuring-filament-tools].
+If you're using the container, skip to [configuring Filament tools](#configuring-filament-tools).
 
 ### Installing from Source
 
@@ -104,9 +104,9 @@ Rerun the command to check that `libpython` was found after installing a new pyt
 
 
 [install-rust]: https://www.rust-lang.org/tools/install
-[fud]: https://docs.calyxir.org/fud/index.html
+[fud]: https://docs.calyxir.org/running-calyx/fud/index.html
 [iverilog-install]: https://iverilog.fandom.com/wiki/Installation_Guide
-[fud-icarus]: https://docs.calyxir.org/fud/index.html#icarus-verilog
+[fud-icarus]: https://docs.calyxir.org/running-calyx/fud/index.html#icarus-verilog
 [cocotb]: https://www.cocotb.org/
 [z3-install]: https://github.com/Z3Prover/z3
 [flit]: https://flit.pypa.io/en/stable/

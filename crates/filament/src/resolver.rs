@@ -61,7 +61,11 @@ impl Resolver {
                 Err(Error::misc(format!(
                     "Refusing to resolve ambiguous import: {}. Conflicting candidates found:\n{}",
                     imp,
-                    lib_canon.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join("\n"),
+                    lib_canon
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join("\n"),
                 )))
             } else {
                 // There is only one canonical path

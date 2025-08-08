@@ -72,7 +72,9 @@ impl Visitor for TopLevel {
         // If no toplevel component was found, find the component with the name "main"
         if self.has_toplevel.is_none() {
             for comp in ast.components.iter_mut() {
-                if comp.sig.name.as_ref() == "main" {
+                if comp.sig.name.as_ref() == "main"
+                    && !comp.sig.attributes.has(utils::CompBool::TopLevel)
+                {
                     // Add the toplevel attribute to the component
                     comp.sig.attributes.set(
                         utils::CompBool::TopLevel,

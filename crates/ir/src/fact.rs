@@ -1,10 +1,10 @@
 use super::{
-    idxs::PropIdx, AddCtx, Ctx, ExprIdx, InfoIdx, MutCtx, TimeIdx, TimeSub,
+    AddCtx, Ctx, ExprIdx, InfoIdx, MutCtx, TimeIdx, TimeSub, idxs::PropIdx,
 };
-use crate::{construct_binop, Event, EventIdx, Expr, Param, ParamIdx, Time};
+use crate::{Event, EventIdx, Expr, Param, ParamIdx, Time, construct_binop};
 use std::fmt::{self, Display};
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 /// Comparison operators
 pub enum Cmp {
     Gt,

@@ -35,7 +35,7 @@ macro_rules! attr_enum {
           )*
       };
   ) => {
-      #[derive(Clone, Copy, PartialEq, strum_macros::EnumString, Eq, Hash)]
+      #[derive(Clone, Copy, PartialEq, strum_macros::EnumString, Debug, Eq, Hash)]
       pub enum $name {
           $(
               $(#[$pub_meta])*
@@ -47,6 +47,23 @@ macro_rules! attr_enum {
               #[strum(disabled)]
               $priv,
           )*
+      }
+
+      impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $(
+                        Self::$pub => write!(f, "{}", $pub_str),
+                    )*
+                    $(
+                        Self::$priv => write!(f, "{}", stringify!($priv)),
+                    )*
+                    // Unreachable pattern here to handle the case where the enum
+                    // has no variants
+                    #[allow(unreachable_patterns)]
+                    _ => write!(f, "{}", stringify!($name)),
+                }
+            }
       }
   };
   (enum $name:ident;)  => {

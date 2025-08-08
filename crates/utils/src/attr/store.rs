@@ -1,18 +1,18 @@
-use crate::{attr::AttrCtx, GPosIdx};
-use std::collections::HashMap;
+use crate::{GPosIdx, attr::AttrCtx};
+use std::{collections::HashMap, hash::Hash};
 
 /// A store for attributes
 #[derive(Clone)]
 pub struct AttrStore<Attr, Value>
 where
-    Attr: Eq + std::hash::Hash + Copy,
+    Attr: Eq + Hash + Copy,
 {
     attrs: HashMap<Attr, (Value, GPosIdx)>,
 }
 
 impl<Attr, Value> AttrStore<Attr, Value>
 where
-    Attr: Eq + std::hash::Hash + Copy,
+    Attr: Eq + Hash + Copy,
 {
     /// iterates over the attributes
     pub fn iter(&self) -> impl Iterator<Item = (Attr, &Value)> {
@@ -22,7 +22,7 @@ where
 
 impl<Attr, Value> AttrCtx<Attr, Value> for AttrStore<Attr, Value>
 where
-    Attr: Eq + std::hash::Hash + Copy,
+    Attr: Eq + Hash + Copy,
 {
     fn get(&self, attr: Attr) -> Option<&Value> {
         self.attrs.get(&attr).map(|(value, _)| value)
@@ -43,7 +43,7 @@ where
 
 impl<Attr, Value> Default for AttrStore<Attr, Value>
 where
-    Attr: Eq + std::hash::Hash + Copy,
+    Attr: Eq + Hash + Copy,
 {
     fn default() -> Self {
         Self {

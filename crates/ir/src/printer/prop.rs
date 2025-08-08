@@ -14,8 +14,8 @@ pub enum PCtx {
 
 impl Ord for PCtx {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering::*;
         use PCtx::*;
+        use std::cmp::Ordering::*;
         match (self, other) {
             // Negations
             (Not, Not) => Equal,

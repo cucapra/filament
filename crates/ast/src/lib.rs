@@ -16,7 +16,7 @@ pub use component::{Component, Extern, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
     Access, Bundle, BundleType, Command, Connect, Exists, Fact, ForLoop, If,
-    Instance, Invoke, ParamLet, Port,
+    Instance, Invoke, ParamLet, Port, PortRef,
 };
 pub use expr::{Expr, Fn, Op};
 pub use fil_utils::Id;

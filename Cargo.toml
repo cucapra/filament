@@ -11,9 +11,9 @@ readme = "README.md"
 description = "A language for Fearless Hardware Design"
 categories = ["compilers"]
 homepage = "https://filamenthdl.com"
-edition = "2021"
+edition = "2024"
 version = "0.1.0"
-rust-version = "1.67"
+rust-version = "1.85"
 
 [workspace.dependencies]
 toml = "0.8"
@@ -35,6 +35,7 @@ easy-smt = { version = "0.2.1" }
 struct-variant = "1.0"
 strum = "0.26.3"
 strum_macros = "0.26.3"
+boxcar = "0.2.10"
 
 fil-utils = { version = "0.1.0", path = "crates/utils" }
 fil-ast = { version = "0.1.0", path = "crates/ast" }
@@ -56,10 +57,6 @@ default-features = false
 [workspace.dependencies.codespan-reporting]
 version = "0.11"
 features = ["ascii-only"]
-
-[workspace.dependencies.string-interner]
-version = "0.14"
-features = ["backends", "std", "inline-more"]
 
 [workspace.dependencies.bitvec]
 version = "1.0.1"

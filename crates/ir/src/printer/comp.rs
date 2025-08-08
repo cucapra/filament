@@ -133,9 +133,11 @@ impl<'a, 'b> Printer<'a, 'b> {
 
     fn port(&self, idx: ir::PortIdx, indent: usize) -> String {
         let port = self.comp.get(idx);
+        let port_attrs = self.comp.port_attrs.get(idx);
         format!(
-            "{:indent$}{}: {} {}",
+            "{:indent$}{}{}: {} {}",
             "",
+            port_attrs,
             self.comp.display(idx),
             self.comp.display(&port.live),
             self.comp.display(port.width),
@@ -149,6 +151,8 @@ impl<'a, 'b> Printer<'a, 'b> {
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
+        writeln!(f, "{}", self.comp.attrs)?;
+
         if self.comp.is_ext() {
             write!(f, "ext ")?;
         };
@@ -212,8 +216,10 @@ impl<'a, 'b> Printer<'a, 'b> {
                 indent = indent + 2
             )?;
             if let Some(assumes) = self.comp.get_exist_assumes(param) {
-                let props =
-                    assumes.iter().map(|p| self.comp.display(*p)).join(", ");
+                let props = assumes
+                    .iter()
+                    .map(|(p, _)| self.comp.display(*p))
+                    .join(", ");
                 writeln!(f, " where {props};")?;
             } else {
                 writeln!(f, ";")?;
@@ -225,7 +231,7 @@ impl<'a, 'b> Printer<'a, 'b> {
 
         if !p_asserts.is_empty() || !e_asserts.is_empty() {
             writeln!(f, "}} where ")?;
-            for idx in p_asserts.iter().chain(e_asserts.iter()) {
+            for (idx, _) in p_asserts.iter().chain(e_asserts.iter()) {
                 write!(f, "{:indent$}", "", indent = indent + 2)?;
                 self.comp.write(*idx, f)?;
                 writeln!(f, ",")?;

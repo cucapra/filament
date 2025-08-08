@@ -1,6 +1,7 @@
 use crate::cmdline;
-use fil_ir::{self as ir, MutCtx};
+use fil_ir::{self as ir, Ctx, MutCtx};
 use fil_utils::{self as utils, AttrCtx, GPosIdx};
+
 
 #[must_use]
 #[derive(PartialEq, Eq)]
@@ -49,6 +50,17 @@ impl<'comp> VisitorData<'comp> {
     /// Get an immutable reference to the current [ir::Context].
     pub fn ctx(&'comp self) -> &'comp ir::Context {
         self.mut_ctx
+    }
+    /// Get an immutable reference to a component.
+    /// This is necessary because if the component being borrowed
+    /// is exactly the same as the one being visited,
+    /// the context no longer contains it.
+    pub fn get(&self, idx: ir::CompIdx) -> &ir::Component {
+        if idx == self.idx {
+            &self.comp
+        } else {
+            self.mut_ctx.get(idx)
+        }
     }
 }
 

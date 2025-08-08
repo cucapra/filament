@@ -43,7 +43,11 @@ impl TimeIdx {
                 ctx.add(Time { event, offset })
             }
             TimeSub::Sym { .. } => {
-                todo!("Cannot add `{}' and `{}'. Please report this as a bug with the program that triggered it.", ctx.display(self), ctx.display(ts));
+                todo!(
+                    "Cannot add `{}' and `{}'. Please report this as a bug with the program that triggered it.",
+                    ctx.display(self),
+                    ctx.display(ts)
+                );
             }
         }
     }
@@ -101,6 +105,23 @@ impl Foldable<ParamIdx, ExprIdx> for TimeSub {
     fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
     where
         F: FnMut(ParamIdx) -> Option<ExprIdx>,
+    {
+        match self {
+            TimeSub::Unit(e) => TimeSub::Unit(e.fold_with(ctx, subst_fn)),
+            TimeSub::Sym { l, r } => TimeSub::Sym {
+                l: l.fold_with(ctx, subst_fn),
+                r: r.fold_with(ctx, subst_fn),
+            },
+        }
+    }
+}
+
+impl Foldable<EventIdx, TimeIdx> for TimeSub {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(EventIdx) -> Option<TimeIdx>,
     {
         match self {
             TimeSub::Unit(e) => TimeSub::Unit(e.fold_with(ctx, subst_fn)),
