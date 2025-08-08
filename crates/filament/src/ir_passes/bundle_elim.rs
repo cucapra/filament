@@ -259,6 +259,10 @@ impl Visitor for BundleElim {
         "bundle-elim"
     }
 
+    fn flag() -> Option<utils::CompBool> {
+        Some(utils::CompBool::BundleLess)
+    }
+
     /// Compiles a connect command by breaking it into multiple simple connect commands
     /// Also eliminates local ports by storing their source bindings in the pass.
     fn connect(
