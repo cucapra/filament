@@ -1,0 +1,5 @@
+comp Add<'G:1>() -> () {}
+
+comp main<'G:1>() -> () {
+  Add := new Add;
+}

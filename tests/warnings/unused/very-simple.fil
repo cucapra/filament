@@ -1,0 +1,8 @@
+comp Add<'G:1>() -> () {}
+
+comp main<'G:1>() -> () with {
+  let UNUSED_PARAM = 42;
+} {
+  // Unused instance - never invoked
+  UnusedAdd := new Add;
+}

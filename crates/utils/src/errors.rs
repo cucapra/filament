@@ -2,10 +2,17 @@
 use super::{Id, InfoIdx};
 use itertools::Itertools;
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum Severity {
+    Warning,
+    Error,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct Error {
     pub kind: String,
     pub notes: Vec<InfoIdx>,
+    pub severity: Severity,
 }
 
 impl std::fmt::Debug for Error {
@@ -33,6 +40,7 @@ impl Error {
         Self {
             kind: format!("invalid file: {}", f),
             notes: vec![],
+            severity: Severity::Error,
         }
     }
 
@@ -40,6 +48,7 @@ impl Error {
         Self {
             kind: format!("failed to write output: {}", e),
             notes: vec![],
+            severity: Severity::Error,
         }
     }
 
@@ -47,6 +56,7 @@ impl Error {
         Self {
             kind: msg.to_string(),
             notes: vec![],
+            severity: Severity::Error,
         }
     }
 
@@ -58,6 +68,7 @@ impl Error {
                 name.to_string(),
             ),
             notes: vec![],
+            severity: Severity::Error,
         }
     }
 
@@ -68,6 +79,7 @@ impl Error {
                 kind.to_string()
             ),
             notes: vec![],
+            severity: Severity::Error,
         }
     }
 
@@ -75,7 +87,36 @@ impl Error {
         Self {
             kind: msg,
             notes: vec![],
+            severity: Severity::Error,
         }
+    }
+
+    pub fn warning<S: ToString>(msg: S) -> Self {
+        Self {
+            kind: msg.to_string(),
+            notes: vec![],
+            severity: Severity::Warning,
+        }
+    }
+
+    pub fn unused_element<S: ToString>(
+        element_type: S,
+        description: S,
+    ) -> Self {
+        Self {
+            kind: format!(
+                "unused {}: {}",
+                element_type.to_string(),
+                description.to_string()
+            ),
+            notes: vec![],
+            severity: Severity::Warning,
+        }
+    }
+
+    pub fn as_error(mut self) -> Self {
+        self.severity = Severity::Error;
+        self
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{Error, GPosIdx, GlobalPositionTable};
+use crate::{Error, GPosIdx, GlobalPositionTable, Severity};
 use codespan_reporting::term::termcolor::ColorChoice;
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label, LabelStyle},
@@ -33,6 +33,8 @@ pub struct Diagnostics {
     infos: Vec<Information>,
     /// Errors that have been reported.
     errors: Vec<Error>,
+    /// Warnings that have been reported.
+    warnings: Vec<Error>,
 }
 
 impl Diagnostics {
@@ -73,14 +75,33 @@ impl Diagnostics {
     // XXX: Make this add a new information object so that its easy to express
     // the "create error and add info" pattern.
     pub fn add_error(&mut self, error: Error) {
-        if !self.errors.contains(&error) {
-            log::trace!("Adding error: {}", error.kind);
-            self.errors.push(error);
+        match error.severity {
+            Severity::Error => {
+                if !self.errors.contains(&error) {
+                    log::trace!("Adding error: {}", error.kind);
+                    self.errors.push(error);
+                }
+            }
+            Severity::Warning => {
+                if !self.warnings.contains(&error) {
+                    log::trace!("Adding warning: {}", error.kind);
+                    self.warnings.push(error);
+                }
+            }
         }
     }
 
-    /// Report all errors and return the number of errors.
-    /// Returns None if there are no errors.
+    /// Add a warning to the diagnostics instance.
+    pub fn add_warning(&mut self, warning: Error) {
+        let warning = Error {
+            severity: Severity::Warning,
+            ..warning
+        };
+        self.add_error(warning);
+    }
+
+    /// Report all errors and warnings. Returns Some(error_count) if there are errors.
+    /// Warnings do not count toward compilation failure.
     pub fn report_all(&mut self) -> Option<u64> {
         let is_tty = atty::is(atty::Stream::Stderr);
         let writer = StandardStream::stderr(if is_tty {
@@ -88,30 +109,55 @@ impl Diagnostics {
         } else {
             ColorChoice::Never
         });
-        if self.errors.is_empty() {
-            return None;
+
+        // Take ownership to avoid borrowing issues
+        let warnings = std::mem::take(&mut self.warnings);
+        let errors = std::mem::take(&mut self.errors);
+
+        // Report warnings first
+        self.report_diagnostics_owned(&writer, warnings, Severity::Warning);
+
+        // Report errors and return count
+        let error_count =
+            self.report_diagnostics_owned(&writer, errors, Severity::Error);
+
+        if error_count > 0 {
+            Some(error_count)
+        } else {
+            None
+        }
+    }
+
+    fn report_diagnostics_owned(
+        &self,
+        writer: &StandardStream,
+        mut diagnostics: Vec<Error>,
+        severity: Severity,
+    ) -> u64 {
+        if diagnostics.is_empty() {
+            return 0;
         }
 
         let mut total = 0;
 
-        // Deduplicate errors based on the location attached to the error
-        let mut error_map = BTreeMap::new();
-        for mut error in self.errors.drain(..) {
-            if !error.notes.is_empty() {
+        // Deduplicate diagnostics based on the location attached to the diagnostic
+        let mut diagnostic_map = BTreeMap::new();
+        for mut diagnostic in diagnostics.drain(..) {
+            if !diagnostic.notes.is_empty() {
                 // Sort everything except the first element
-                let first = error.notes.remove(0);
-                error.notes.sort();
-                error.notes.insert(0, first);
+                let first = diagnostic.notes.remove(0);
+                diagnostic.notes.sort();
+                diagnostic.notes.insert(0, first);
             }
 
-            error_map
-                .entry(error.notes)
+            diagnostic_map
+                .entry(diagnostic.notes)
                 .or_insert_with(Vec::new)
-                .push(error.kind);
+                .push(diagnostic.kind);
         }
 
         let table = GlobalPositionTable::get();
-        for (all_notes, errors) in error_map {
+        for (all_notes, messages) in diagnostic_map {
             let mut labels = vec![];
             let mut notes = vec![];
             for (idx, info) in all_notes.iter().enumerate() {
@@ -133,19 +179,31 @@ impl Diagnostics {
                 }
             }
 
-            let msg = if errors.len() > 1 {
-                notes.extend(errors.iter().map(|e| e.to_string()));
-                "Multiple errors encountered".to_string()
+            let msg = if messages.len() > 1 {
+                notes.extend(messages.iter().map(|e| e.to_string()));
+                match severity {
+                    Severity::Error => {
+                        "Multiple errors encountered".to_string()
+                    }
+                    Severity::Warning => {
+                        "Multiple warnings encountered".to_string()
+                    }
+                }
             } else {
-                errors[0].to_string()
+                messages[0].to_string()
             };
 
             total += 1;
+            let diagnostic_type = match severity {
+                Severity::Error => Diagnostic::error(),
+                Severity::Warning => Diagnostic::warning(),
+            };
+
             term::emit(
                 &mut writer.lock(),
                 &term::Config::default(),
                 table.files(),
-                &Diagnostic::error()
+                &diagnostic_type
                     .with_message(msg)
                     .with_labels(labels)
                     .with_notes(notes),
@@ -153,7 +211,17 @@ impl Diagnostics {
             .unwrap();
         }
 
-        Some(total)
+        total
+    }
+
+    /// Check if there are any errors (not warnings)
+    pub fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
+    /// Check if there are any warnings
+    pub fn has_warnings(&self) -> bool {
+        !self.warnings.is_empty()
     }
 }
 

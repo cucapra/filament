@@ -1,0 +1,19 @@
+comp Add[D, I, W, U]<'G:D>() -> (out: ['G, 'G+I] W) with {
+  some L;
+} {}
+
+comp main<'G:1>() -> (out: ['G, 'G+1] 32) with {
+  let UNUSED_PARAM = 32;
+  let USED_PARAM = 10;
+} {
+  // Unused instance - never invoked
+  UnusedAdd := new Add[USED_PARAM];
+  
+  // Used instance but unused invocation 
+  UsedAdd := new Add[USED_PARAM];
+  unused_invoke := UsedAdd<'G>();
+ 
+  // Actually used
+  used_invoke := UsedAdd<'G>();
+  out = used_invoke.out;
+}
