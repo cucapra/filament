@@ -126,7 +126,8 @@ impl Discharge {
                     .as_ref()
                     .map(|s| fs::File::create(s).unwrap()),
             )
-            .solver(name, s_opts)
+            .solver(name)
+            .solver_args(s_opts)
             .build()
             .unwrap()
     }
