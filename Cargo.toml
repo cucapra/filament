@@ -16,7 +16,7 @@ version = "0.1.0"
 rust-version = "1.85"
 
 [workspace.dependencies]
-toml = "0.8"
+toml = "0.9"
 serde = "1.0"
 argh = "0.1"
 log = "0.4"
@@ -24,17 +24,17 @@ pest = "2.1"
 pest_consume = "1.1"
 pest_derive = "2.1"
 linked_hash_set = "0.1"
-itertools = "0.10"
+itertools = "0.14"
 linked-hash-map = "0.5"
 derivative = "2.2"
 smallvec = "1"
 topological-sort = "0.2"
 atty = "0.2"
 lazy_static = "1.4"
-easy-smt = { version = "0.2.1" }
+easy-smt = { version = "0.3.2" }
 struct-variant = "1.0"
-strum = "0.26.3"
-strum_macros = "0.26.3"
+strum = "0.27.2"
+strum_macros = "0.27.2"
 boxcar = "0.2.10"
 
 fil-utils = { version = "0.1.0", path = "crates/utils" }
@@ -50,12 +50,10 @@ calyx-opt = { version = "0.7.1" }
 calyx-backend = { version = "0.7.1" }
 
 [workspace.dependencies.env_logger]
-version = "0.9"
-features = ["termcolor", "atty"]
-default-features = false
+version = "0.11"
 
 [workspace.dependencies.codespan-reporting]
-version = "0.11"
+version = "0.12"
 features = ["ascii-only"]
 
 [workspace.dependencies.bitvec]
