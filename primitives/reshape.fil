@@ -187,3 +187,45 @@ comp DecimateTime[W, N]<'G: 1>(
   out = in;
   valid = eq.out;
 }
+
+// Takes a stream of signals with a valid tag and produces a block of size
+// N where all the signals are valid.
+//
+// `block_valid` is only asserted the unit at collected `N` valid signals after
+// which it resets.
+comp CollectValid[W, N]<'G:1>(
+  en: interface['G],
+  in: ['G, 'G+1] W,
+  valid: ['G, 'G+1] 1
+) -> (
+  out[N]: ['G, 'G+1] W,
+  block_valid: ['G, 'G+1] 1
+) where W > 0 {
+  let Bits = log2(N)+1; assume Bits > 0;
+
+  // Increment the index if the value on the stream is valid
+  idx := new Prev[Bits, 1]<'G>(mux.out);
+  one := new Const[Bits, 1]<'G>();
+  add := new Add[Bits]<'G>(idx.prev, one.out);
+  mux := new Mux[Bits]<'G>(valid, add.out, idx.prev);
+
+  // Are all the blocks valid?
+  n := new Const[Bits, N]<'G>();
+  n_sub_1 := new Sub[Bits]<'G>(n.out, one.out);
+  max_reached := new Eq[Bits]<'G>(n_sub_1.out, idx.prev);
+  block_valid = max_reached.out;
+
+  // Take the location index points to within the output block and assign the
+  // value to it (which then gets latched).
+  zero := new Const[W, 0]<'G>();
+  for i in 0..N {
+    p := new Prev[W, 1]<'G>(next.out);
+    v := new Const[Bits, i]<'G>();
+    eq := new Eq[Bits]<'G>(v.out, idx.prev);
+    eq_and_valid := new And[1]<'G>(eq.out, valid);
+    assign_mux := new Mux[W]<'G>(eq_and_valid.out, in, p.prev);
+    // max ? 0 : eq ? in : p;
+    next := new Mux[W]<'G>(max_reached.out, zero.out, assign_mux.out);
+    out{i} = p.prev;
+  }
+}
