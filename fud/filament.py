@@ -184,9 +184,9 @@ class CocotbExecBase(Stage):
             """
             cmd = " ".join(
                 [
-                    config["stages", self.name, "exec"],
+                    config["stages", FilamentStage.name, "exec"],
                     "--library",
-                    config["stages", self.name, "library"],
+                    config["stages", FilamentStage.name, "library"],
                     "--dump-interface",
                     # We should only run this after the module has been type
                     # checked.

@@ -26,9 +26,9 @@ cmd = """
 
 [[tests]]
 name = "run"
-paths = ["tests/run/*.fil"]
+paths = ["tests/run/**/*.fil"]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s filament.flags ' --show-models' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -s filament.flags ' --show-models' -s filament.library "." -q
 """
 
 # ============= Testing primitive implementations =============

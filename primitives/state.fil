@@ -94,10 +94,10 @@ comp Counter[W, N]<'G:1>(
   add := new Add[Bits]<'G>(counter.prev, one.out);
 
   max := new Const[Bits, N]<'G>();
-  eq := new Eq[Bits]<'G>(counter.prev, max.out);
+  eq := new Eq[Bits]<'G>(add.out, max.out);
 
   zero := new Const[Bits, 0]<'G>();
-  mux := new Mux[Bits]<'G>(eq.out, counter.prev, zero.out);
+  mux := new Mux[Bits]<'G>(eq.out, zero.out, add.out);
 
   resized := new ZeroExtend[Bits, W]<'G>(counter.prev);
 

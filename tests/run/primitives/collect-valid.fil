@@ -1,0 +1,17 @@
+import "primitives/core.fil";
+import "primitives/reshape.fil";
+
+comp main<'G:1>(
+  en: interface['G],
+  in: ['G, 'G+1] 32,
+  valid: ['G, 'G+1] 1,
+) -> (
+  o1: ['G, 'G+1] 32,
+  o2: ['G, 'G+1] 32,
+  val: ['G, 'G+1] 1
+) {
+  cv := new CollectValid[32, 2]<'G>(in, valid);
+  o1 = cv.out{0};
+  o2 = cv.out{1};
+  val = cv.block_valid;
+}
