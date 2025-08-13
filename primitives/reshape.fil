@@ -157,3 +157,33 @@ comp SplitWire[W, N, ?L=1]<'G: L>(
       out{1..N} = spl.out{0..N-1};
    }
 }
+
+// Decimates inputs in space. A module provides N inputs and this module
+// returns the first one as its output.
+comp DecimateSpace[W, N]<'G: 1>(
+  in[W]: ['G, 'G+1] W
+) -> (
+  out: ['G, 'G+1] W
+) where N > 0 {
+  out = in{0};
+}
+
+// Decimates inputs in time using a valid tag. Valid is asserted every N
+// cycles an input is sent into the module (i.e., `en` is asserted).
+comp DecimateTime[W, N]<'G: 1>(
+  en: interface['G],
+  in: ['G, 'G+1] W
+) -> (
+  out: ['G, 'G+1] W,
+  valid: ['G, 'G+1] 1
+) where W > 0, N > 0 {
+  let Bits = log2(N) + 1;
+  assume Bits > 0;
+
+  counter := new Counter[Bits, N]<'G>();
+  one := new Const[Bits, 1]<'G>();
+  eq := new Eq[Bits]<'G>(counter.out, one.out);
+
+  out = in;
+  valid = eq.out;
+}
