@@ -1,0 +1,13 @@
+import "primitives/core.fil";
+import "primitives/reshape.fil";
+
+comp main<'G:1>(
+  en: interface['G],
+  in: ['G, 'G+1] 32
+) -> (
+  out: ['G, 'G+1] 32,
+  val: ['G, 'G+1] 1
+) {
+  dt := new DecimateTime[32, 2]<'G>(in);
+  out = dt.out; val = dt.valid;
+}

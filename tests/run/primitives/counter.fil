@@ -1,0 +1,6 @@
+import "primitives/state.fil";
+
+comp main<'G:1>(en: interface['G], in: ['G, 'G+1] 32) -> (count: ['G, 'G+1] 32) {
+  counter := new Counter[32, 3]<'G>();
+  count = counter.out;
+}

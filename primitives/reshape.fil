@@ -157,3 +157,77 @@ comp SplitWire[W, N, ?L=1]<'G: L>(
       out{1..N} = spl.out{0..N-1};
    }
 }
+
+// Decimates inputs in space. A module provides N inputs and this module
+// returns the first one as its output.
+comp DecimateSpace[W, N]<'G: 1>(
+  in[W]: ['G, 'G+1] W
+) -> (
+  out: ['G, 'G+1] W
+) where N > 0 {
+  out = in{0};
+}
+
+// Decimates inputs in time using a valid tag. Valid is asserted every N
+// cycles an input is sent into the module (i.e., `en` is asserted).
+comp DecimateTime[W, N]<'G: 1>(
+  en: interface['G],
+  in: ['G, 'G+1] W
+) -> (
+  out: ['G, 'G+1] W,
+  valid: ['G, 'G+1] 1
+) where W > 0, N > 0 {
+  let Bits = log2(N) + 1;
+  assume Bits > 0;
+
+  counter := new Counter[Bits, N]<'G>();
+  one := new Const[Bits, 1]<'G>();
+  eq := new Eq[Bits]<'G>(counter.out, one.out);
+
+  out = in;
+  valid = eq.out;
+}
+
+// Takes a stream of signals with a valid tag and produces a block of size
+// N where all the signals are valid.
+//
+// `block_valid` is only asserted the unit at collected `N` valid signals after
+// which it resets.
+comp CollectValid[W, N]<'G:1>(
+  en: interface['G],
+  in: ['G, 'G+1] W,
+  valid: ['G, 'G+1] 1
+) -> (
+  out[N]: ['G, 'G+1] W,
+  block_valid: ['G, 'G+1] 1
+) where W > 0 {
+  let Bits = log2(N)+1; assume Bits > 0;
+
+  // Increment the index if the value on the stream is valid
+  idx := new Prev[Bits, 1]<'G>(reset.out);
+  one := new Const[Bits, 1]<'G>();
+  zero_idx := new Const[Bits, 0]<'G>();
+  add := new Add[Bits]<'G>(idx.prev, one.out);
+  mux := new Mux[Bits]<'G>(valid, add.out, idx.prev);
+  reset := new Mux[Bits]<'G>(max_reached.out, zero_idx.out, mux.out);
+
+  // Are all the blocks valid?
+  n := new Const[Bits, N]<'G>();
+  // n_sub_1 := new Sub[Bits]<'G>(n.out, one.out);
+  max_reached := new Eq[Bits]<'G>(n.out, idx.prev);
+  block_valid = max_reached.out;
+
+  // Take the location index points to within the output block and assign the
+  // value to it (which then gets latched).
+  zero := new Const[W, 0]<'G>();
+  for i in 0..N {
+    p := new Prev[W, 1]<'G>(next.out);
+    v := new Const[Bits, i]<'G>();
+    eq := new Eq[Bits]<'G>(v.out, idx.prev);
+    eq_and_valid := new And[1]<'G>(eq.out, valid);
+    assign_mux := new Mux[W]<'G>(eq_and_valid.out, in, p.prev);
+    // max ? 0 : eq ? in : p;
+    next := new Mux[W]<'G>(max_reached.out, zero.out, assign_mux.out);
+    out{i} = p.prev;
+  }
+}

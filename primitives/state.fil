@@ -76,3 +76,30 @@ comp Shift[W, D, ?N=1]<'G: 1>(
    out{0..N} = out_split.out{0..N};
 }
 /* ANCHOR_END: shift */
+
+// A counter that counts up by one every time `en` is asserted and resets
+// when it reaches the value `N`.
+comp Counter[W, N]<'G:1>(
+  en: interface['G]
+) -> (out: ['G, 'G+1] W) with {
+  let Out = log2(N) + 1;
+} where W > 0 {
+  // Needed to ensure that N can fit within W.
+  let Bits = log2(N)+1;
+  assume Bits > 0;
+  assume W >= Bits;
+
+  one := new Const[Bits, 1]<'G>();
+  counter := new Prev[Bits, 1]<'G>(mux.out);
+  add := new Add[Bits]<'G>(counter.prev, one.out);
+
+  max := new Const[Bits, N]<'G>();
+  eq := new Eq[Bits]<'G>(add.out, max.out);
+
+  zero := new Const[Bits, 0]<'G>();
+  mux := new Mux[Bits]<'G>(eq.out, zero.out, add.out);
+
+  resized := new ZeroExtend[Bits, W]<'G>(counter.prev);
+
+  out = resized.out;
+}
