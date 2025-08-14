@@ -28,11 +28,11 @@ function M.setup()
 
   -- Start tree-sitter for current buffer
   vim.treesitter.start(0, 'filament')
-  
+
   -- Set up buffer-local options
   vim.bo.commentstring = '// %s'
   vim.bo.comments = '://'
-  
+
   -- Enable folding if supported
   if vim.fn.has('nvim-0.9') == 1 then
     vim.wo.foldmethod = 'expr'
@@ -51,19 +51,23 @@ function M.register_parser()
 
   -- Get the path to our compiled parser
   local script_path = debug.getinfo(1, "S").source:sub(2)
-  local plugin_dir = vim.fn.fnamemodify(script_path, ":h:h:h")
-  local treesitter_dir = vim.fn.fnamemodify(plugin_dir, ":h:h") .. "/treesitter"
+  local plugin_dir = vim.fn.fnamemodify(script_path, ":h:h:h")  -- /path/to/vim/filament
+  local treesitter_dir = vim.fn.fnamemodify(plugin_dir, ":h:h") .. "/treesitter"  -- /path/to/tools/treesitter
   local parser_path = treesitter_dir .. "/src/parser.so"
-  
+
   -- Check if parser exists
   if vim.fn.filereadable(parser_path) == 0 then
-    vim.notify_once('Filament parser not built. Build it with: :FilamentBuildParser', vim.log.levels.WARN)
+    vim.notify_once(
+      string.format(
+        'Filament parser not found in `%s`. Build it with: :FilamentBuildParser',
+        parser_path
+      ), vim.log.levels.WARN)
     return false
   end
 
   -- Register the language using the official API
   vim.treesitter.language.add('filament', { path = parser_path })
-  
+
   -- Register the filetype association
   vim.treesitter.language.register('filament', { 'fil' })
 
@@ -74,16 +78,16 @@ end
 function M.install_parser()
   -- With the new approach, we build the parser from source
   local script_path = debug.getinfo(1, "S").source:sub(2)
-  local plugin_dir = vim.fn.fnamemodify(script_path, ":h:h:h")
-  local treesitter_dir = vim.fn.fnamemodify(plugin_dir, ":h:h") .. "/treesitter"
-  
+  local plugin_dir = vim.fn.fnamemodify(script_path, ":h:h:h")  -- /path/to/vim/filament
+  local treesitter_dir = vim.fn.fnamemodify(plugin_dir, ":h") .. "/treesitter"  -- /path/to/tools/treesitter
+
   vim.notify('Building Filament parser from source...', vim.log.levels.INFO)
-  
+
   -- Run the build command
   local handle = io.popen('cd "' .. treesitter_dir .. '" && npm run build-parser 2>&1')
   local result = handle:read("*a")
   local success = handle:close()
-  
+
   if success then
     vim.notify('✓ Filament parser built successfully', vim.log.levels.INFO)
     -- Register the parser
@@ -106,18 +110,18 @@ function M.status()
 
   -- Check if our local parser exists
   local script_path = debug.getinfo(1, "S").source:sub(2)
-  local plugin_dir = vim.fn.fnamemodify(script_path, ":h:h:h")
-  local treesitter_dir = vim.fn.fnamemodify(plugin_dir, ":h:h") .. "/treesitter"
+  local plugin_dir = vim.fn.fnamemodify(script_path, ":h:h:h")  -- /path/to/vim/filament
+  local treesitter_dir = vim.fn.fnamemodify(plugin_dir, ":h") .. "/treesitter"  -- /path/to/tools/treesitter
   local parser_path = treesitter_dir .. "/src/parser.so"
   local parser_installed = vim.fn.filereadable(parser_path) == 1
-  
+
   -- Also check if the language is registered with Neovim
   local lang_registered = false
   local ok = pcall(function()
     vim.treesitter.language.inspect('filament')
     lang_registered = true
   end)
-  
+
   local message
   if parser_installed and lang_registered then
     message = 'Filament tree-sitter support ready'
@@ -126,7 +130,7 @@ function M.status()
   else
     message = 'Parser not built (run install_parser)'
   end
-  
+
   return {
     available = true,
     parser_installed = parser_installed,
