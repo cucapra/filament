@@ -40,7 +40,7 @@ Plug 'filament-hdl/filament', {'rtp': 'treesitter/tools/vim/filament', 'do': 'cd
 }
 ```
 
-**That's it!** The parser builds automatically and syntax highlighting works immediately.
+**That's it!** The `do`/`build` hook builds the parser during plugin installation, then syntax highlighting works immediately.
 
 ### Requirements
 - **Neovim 0.8+** (for tree-sitter support)
@@ -73,7 +73,7 @@ Add to your lazy configuration:
   dependencies = { 'nvim-treesitter/nvim-treesitter' },
   config = function()
     require('filament').setup({
-      auto_install = false, -- Parser is built automatically
+      -- Parser is built by 'build' hook above
     })
   end,
 }
@@ -89,7 +89,7 @@ use {
   run = 'cd treesitter/tools/treesitter && npm install && npm run build-parser',
   config = function()
     require('filament').setup({
-      auto_install = false, -- Parser is built automatically
+      -- Parser is built by 'run' hook above
     })
   end
 }
@@ -366,9 +366,9 @@ The tree-sitter grammar provides comprehensive highlighting for:
 Error: no parser for 'filament' language
 ```
 **Solutions**:
-1. Run `:TSInstall filament` in Neovim
-2. Use `require('filament').setup({ auto_install = true })`
-3. Build parser manually from `treesitter/tools/treesitter/`
+1. **Most likely**: Plugin manager didn't run the build hook. Reinstall with `:PlugClean` then `:PlugInstall`
+2. **Manual build**: Run `:FilamentBuildParser` in Neovim
+3. **Command line**: `cd treesitter/tools/treesitter && npm run build-parser`
 
 ### Plugin Not Loading
 1. Check runtimepath: `:set rtp?` should include filament plugin path

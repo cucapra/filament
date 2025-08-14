@@ -19,11 +19,12 @@ function M.setup(opts)
     }, opts.treesitter or {}))
   end
   
-  -- Auto-install parser if requested
+  -- Auto-install parser if explicitly requested (not recommended)
   if opts.auto_install then
     vim.schedule(function()
       local status = treesitter.status()
       if status.available and not status.parser_installed then
+        vim.notify('Auto-installing Filament parser...', vim.log.levels.INFO)
         treesitter.install_parser()
       end
     end)

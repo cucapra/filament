@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(npx tree-sitter parse:*)",
+      "Bash(npx tree-sitter:*)",
+      "Bash(tree:*)",
+      "Bash(lua:*)",
+      "Bash(npm run build-parser:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

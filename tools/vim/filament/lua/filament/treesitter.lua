@@ -57,7 +57,7 @@ function M.register_parser()
   
   -- Check if parser exists
   if vim.fn.filereadable(parser_path) == 0 then
-    vim.notify('Filament parser not found at ' .. parser_path .. '. Run: cd ' .. treesitter_dir .. ' && npm run build-parser', vim.log.levels.WARN)
+    vim.notify_once('Filament parser not built. Build it with: :FilamentBuildParser', vim.log.levels.WARN)
     return false
   end
 

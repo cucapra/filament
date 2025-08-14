@@ -29,10 +29,11 @@ require('nvim-treesitter.configs').setup {
   },
 }
 
--- Setup filament with auto-install
+-- Setup filament (parser built by 'do' hook above)
 require('filament').setup({
-  auto_install = true,
   treesitter = {
+    highlight = { enable = true },
+    indent = { enable = true },
     fold = { enable = true },
     incremental_selection = { enable = true },
   }

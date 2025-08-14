@@ -43,9 +43,8 @@ return {
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
     config = function()
       require('filament').setup({
-        auto_install = true,
+        -- Parser built by 'build' hook above, no auto_install needed
         treesitter = {
-          -- Additional tree-sitter configuration specific to filament
           highlight = { enable = true },
           indent = { enable = true },
           fold = { enable = true },

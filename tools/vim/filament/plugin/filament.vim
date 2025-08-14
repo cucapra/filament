@@ -6,30 +6,27 @@ if exists('g:loaded_filament_plugin')
 endif
 let g:loaded_filament_plugin = 1
 
-" Build parser on plugin installation (for plugin managers with hooks)
-function! s:BuildFilamentParser()
-  let l:plugin_dir = expand('<sfile>:p:h:h')
-  let l:treesitter_dir = fnamemodify(l:plugin_dir, ':h:h') . '/treesitter'
+" Manual parser build function (for users who need it)
+function! FilamentBuildParser()
+  echo "Building Filament tree-sitter parser..."
+  echo "This will build the parser from source."
+  echo ""
   
-  if isdirectory(l:treesitter_dir)
-    echo "Building Filament tree-sitter parser..."
-    let l:result = system('cd "' . l:treesitter_dir . '" && npm install && npm run build-parser')
-    if v:shell_error == 0
-      echo "✓ Filament parser built successfully"
-    else
-      echohl ErrorMsg
-      echo "✗ Failed to build Filament parser. Please run manually:"
-      echo "  cd " . l:treesitter_dir . " && npm run build-parser"
-      echohl None
-    endif
+  " Use the lua module which has better path handling
+  if has('nvim-0.8')
+    lua require('filament.treesitter').install_parser()
+  else
+    echohl ErrorMsg
+    echo "✗ This command requires Neovim 0.8+ for tree-sitter support"
+    echo "For manual build, run:"
+    echo "  cd <filament-repo>/treesitter/tools/treesitter"
+    echo "  npm install && npm run build-parser"
+    echohl None
   endif
 endfunction
 
-" Auto-build on first load (vim-plug post-update hook)
-if !exists('g:filament_parser_built')
-  let g:filament_parser_built = 1
-  call s:BuildFilamentParser()
-endif
+" Command to manually build parser if needed
+command! FilamentBuildParser call FilamentBuildParser()
 
 " Auto-setup tree-sitter highlighting when opening filament files
 augroup filament_treesitter_setup

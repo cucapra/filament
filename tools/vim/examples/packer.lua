@@ -36,7 +36,7 @@ return require('packer').startup(function(use)
     run = 'cd treesitter/tools/treesitter && npm install && npm run build-parser',
     config = function()
       require('filament').setup({
-        auto_install = true,
+        -- Parser built by 'run' hook above, no auto_install needed
         treesitter = {
           highlight = { enable = true },
           indent = { enable = true },
