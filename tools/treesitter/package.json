@@ -1,0 +1,35 @@
+{
+  "name": "tree-sitter-filament",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for the Filament hardware description language",
+  "main": "bindings/node",
+  "scripts": {
+    "build": "tree-sitter generate && node-gyp build",
+    "build-parser": "tree-sitter generate && gcc -o src/parser.so -shared -fPIC -I src src/parser.c",
+    "postinstall": "npm run build-parser",
+    "test": "tree-sitter test"
+  },
+  "keywords": [
+    "tree-sitter",
+    "grammar",
+    "filament",
+    "hardware",
+    "hdl"
+  ],
+  "author": "Filament Team",
+  "license": "MIT",
+  "dependencies": {
+    "nan": "^2.17.0"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.20.8"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.filament",
+      "file-types": [
+        "fil"
+      ]
+    }
+  ]
+}

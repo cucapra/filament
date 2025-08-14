@@ -1,0 +1,14 @@
+comp TwiddleMul[i, N, Width, E, ?M=W-E-1]<'G: 1>(
+  in[2]: ['G, 'G+1] Width
+) -> (
+  out[2]: ['G+L, 'G+L+1] W
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where
+    Width == E + M + 1,
+    E > 1
+{
+  let shift = 2;
+  out = in;
+}
