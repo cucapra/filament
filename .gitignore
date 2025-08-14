@@ -29,4 +29,4 @@ book/
 evaluation/iterative-divider/data.json
 
 # Prevents editing vscode extensions further
-/.vscode/settings.json
+/.vscode/settings.json.claude/
