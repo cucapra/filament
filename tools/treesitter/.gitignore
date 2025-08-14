@@ -1,0 +1,38 @@
+# Tree-sitter generated files
+src/parser.c
+src/parser.so
+src/grammar.json
+src/node-types.json
+src/tree_sitter/
+
+# Build artifacts
+build/
+*.node
+
+# Node.js dependencies
+node_modules/
+package-lock.json
+
+# Rust build artifacts (if using Rust bindings)
+target/
+Cargo.lock
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Test artifacts
+*.log
+*.tmp

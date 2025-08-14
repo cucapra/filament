@@ -1,0 +1,9 @@
+import "primitives/core.fil";
+
+comp main<'G: 1>(
+    left: ['G, 'G+1] 32,
+    right: ['G, 'G+1] 32,
+) -> ( out: ['G+3, 'G+4] 32) {
+    A := new Add[32];
+    out = A.out;
+}

@@ -1,0 +1,3 @@
+comp Test() -> () {
+    a0 := A<'G>(left, right);
+}
