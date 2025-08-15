@@ -12,3 +12,17 @@ comp BitsNeeded[N]<'G:1>() -> () with {
   let Bits = log2(N)+1; assume Bits > 0;
   Out := Bits;
 }
+
+/// Return the parameter that is the maximum of A or B.
+comp Max[A, B]<'G:1>() -> () with {
+  some Out where Out == if A > B { A } else { B };
+} {
+  Out := if A > B { A } else { B };
+}
+
+/// Return the parameter that is the minimum of A or B.
+comp Min[A, B]<'G:1>() -> () with {
+  some Out where Out == if A > B { B } else { A };
+} {
+  Out := if A > B { B } else { A };
+}

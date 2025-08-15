@@ -77,6 +77,36 @@ comp Shift[W, D, ?N=1]<'G: 1>(
 }
 /* ANCHOR_END: shift */
 
+/// Shift 2D bundle of signals
+comp Shift2D[W, D0, D1, ?N=1]<'G:1>(
+  in[D0][D1]: ['G, 'G+1] W
+) -> (
+  out[D0][D1]: ['G+N, 'G+N+1] W
+) where W > 0, D0 > 0, D1 > 0, N > 0 {
+  for i in 0..D0 {
+    for j in 0..D1 {
+      s := new Shift[W, N]<'G>(in{i}{j});
+      out{i}{j} = s.out;
+    }
+  }
+}
+
+/// Hold 2D bundle of signals active for multiple cycles.
+comp Strech2D[W, D0, D1, H]<'G:H>(
+  en: interface['G],
+  in[D0][D1]: ['G, 'G+1] W
+) -> (
+  out[D0][D1]: ['G+1, 'G+H+1] W
+) where W > 0, D0 > 0, D1 > 0, H > 0 {
+  for i in 0..D0 {
+    for j in 0..D1 {
+      r := new Register[W]<'G, 'G+H+1>(in{i}{j});
+      out{i}{j} = r.out;
+    }
+  }
+}
+
+
 // A counter that counts up by one every time `en` is asserted and resets
 // when it reaches the value `N`.
 comp Counter[W, N]<'G:1>(

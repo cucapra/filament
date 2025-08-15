@@ -27,10 +27,11 @@ comp Conv2dAbstract<'G: 1>(
 /// 16 inputs at the same time and exactly for one cycle.
 comp Wrapper<'G: II>(
     valid_up: interface['G],
-    I[16]: ['G, 'G+1] 8
+    I[16]: ['G, 'G+H] 8
 ) -> (
     O[16]: ['G+L, 'G+L+1] 8
 ) with {
+    some H where H == 1;
     /// The latency of the module
     some L where L > 0;
     /// The initiation interval of the module
@@ -72,6 +73,8 @@ comp Wrapper<'G: II>(
 
     // The II is limited by the speed at which the convolution can process the inputs.
     II := 16/C::N;
+
+    H := 1;
 }
 
 // The main component has the same interface for each design

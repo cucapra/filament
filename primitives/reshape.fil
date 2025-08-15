@@ -103,6 +103,7 @@ comp Deserialize[W, N, B, ?C=1, ?H=1]<'G: End-1>(
     }
 }
 
+
 /// Take a bundle of length L that produces values every N and cycles and make
 /// it produce values every M cycles where M > N.
 comp Downsample[N, M, L, W]<'G: (M-N)*L>(
