@@ -1,4 +1,5 @@
 import "primitives/core.fil";
+import "primitives/param-funcs.fil";
 
 // A highly parameterized serializer. The parameters are:
 // * W: The width of the inputs
@@ -201,7 +202,8 @@ comp CollectValid[W, N]<'G:1>(
   out[N]: ['G, 'G+1] W,
   block_valid: ['G, 'G+1] 1
 ) where W > 0 {
-  let Bits = log2(N)+1; assume Bits > 0;
+  BN := new BitsNeeded[N];
+  let Bits = BN::Out;
 
   // Increment the index if the value on the stream is valid
   idx := new Prev[Bits, 1]<'G>(reset.out);

@@ -1,0 +1,14 @@
+/**
+ * Computes the number of bits needed to represent the constant [N].
+ *  Usage:
+ *  ```filament
+ *  BN := new BitsNeeded[N];
+ *  let Bits = BN::Out;     // Out represents number of bits for [N]
+ *  ```
+ */
+comp BitsNeeded[N]<'G:1>() -> () with {
+  some Out where Out == log2(N)+1, Out > 0;
+} {
+  let Bits = log2(N)+1; assume Bits > 0;
+  Out := Bits;
+}
