@@ -126,7 +126,7 @@ module Conv2D#(
 // Interface with the convolution module
 logic conv_valid_i, conv_valid_o;
 logic[N-1:0][7:0] conv_out, conv_in;
-AetherlingConv#(.N) Conv(
+AetherlingConv#(.N(N)) Conv(
   .clk, .reset,
   .in(conv_in),
   .valid_i(conv_valid_i),
@@ -148,14 +148,14 @@ end
 
 // The chunk we are working on.
 localparam Chunks = 16 / N;
+localparam Chunks_1 = Chunks - 1;
 logic[3:0] idx, nxt_idx;
 always_ff @(posedge clk) begin
   if (reset) idx <= '0;
   else idx <= nxt_idx;
 end
 
-wire last_chunk = idx == Chunks[3:0]-1;
-
+wire last_chunk = idx == Chunks_1[3:0];
 
 // State machine
 logic[1:0] st, nxt_st;
@@ -170,14 +170,19 @@ always_comb begin
     end
     PROC_SEND: begin
       nxt_st = PROC_RECV;
-      nxt_idx = idx + 1;
       conv_valid_i = 1;
     end
     PROC_RECV: begin
       // If the convolution module has returned a valid value.
       if (conv_valid_o) begin
-        if (last_chunk) nxt_st = WRITING; // This is the last chunk. Finish processing.
-        else nxt_st = PROC_SEND;          // More chunks remain.
+        // This is the last chunk. Finish processing.
+        if (last_chunk) begin
+          nxt_idx = '0;
+          nxt_st = WRITING;
+        end else begin
+          nxt_idx = idx + 1;
+          nxt_st = PROC_SEND;
+        end
       end
     end
     WRITING: begin
@@ -195,7 +200,7 @@ always_comb begin
   conv_in = '0;
   for (int j = 0; j < Chunks; j++) begin
     if (idx == j[3:0]) begin
-      conv_in = in[(N*(j+1)-1)+:N];
+      conv_in = in[N*j+:N];
     end
   end
 end
@@ -206,15 +211,82 @@ always_comb begin
   for (int j = 0; j < Chunks; j++) begin
     // If the output is valid;
     if (conv_valid_o && idx == j[3:0]) begin
-      out[(N*(j+1)-1)+:N] = conv_out;
+      // $display("writing to chunk %0d: [%0d:%0d]", j[3:0], N*j+N, N*j);
+      out[N*j+:N] = conv_out;
     end
   end
 end
 always_ff @(posedge clk) begin
   o <= out;
+  /*
+  if (conv_valid_o) begin
+    $write("out: ");
+    for (int i = 0; i < 16; i++)
+      $write("%0d,", out[i]);
+    $write("; conv_out: ");
+    for (int i = 0; i < N; i++)
+      $write("%0d,", conv_out[i]);
+    $display("");
+  end
+  */
 end
 
 assign valid_o = st == WRITING;
 assign ready_i = st == IDLE;
+
+endmodule
+
+// Pad the input image by a row and a column;
+module Pad#(
+  parameter D0 = 8,
+  parameter D1 = 8,
+  parameter W = 8
+) (
+  input logic[D0-1:0][D1-1:0][W-1:0] in,
+  output logic[D0+1:0][D1+1:0][W-1:0] out
+);
+
+always_comb begin
+  out = '0;
+  // Copy input to the center of the output array
+  for (int i = 0; i < D0; i++) begin
+    for (int j = 0; j < D1; j++) begin
+      out[i+1][j+1] = in[i][j];
+    end
+  end
+end
+
+endmodule
+
+// Downsample by taking every other row and column
+module Downsample#(
+  parameter D0 = 8,
+  parameter D1 = 8,
+  parameter W = 8
+) (
+  input logic[D0-1:0][D1-1:0][W-1:0] in,
+  output logic[D0/2-1:0][D1/2-1:0][W-1:0] out
+);
+always_comb begin
+  for (int i = 0; i < D0/2; i++) begin
+    for (int j = 0; j < D1/2; j++) begin
+      out[i][j] = in[2*i][2*j];
+    end
+  end
+end
+endmodule
+
+module Pyramid (
+  input logic clk,
+  input logic reset,
+
+  input logic valid_i,
+  output logic ready_i,
+  input logic[15:0][7:0] in,
+
+  output logic valid_o,
+  input logic ready_o,
+  output logic[15:0][7:0] out
+);
 
 endmodule
