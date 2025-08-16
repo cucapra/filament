@@ -314,6 +314,8 @@ module Blur#(
   input logic clk,
   input logic reset,
 
+  output logic[1:0] state,
+
   input logic valid_i,
   output logic ready_i,
   input logic[D0-1:0][D1-1:0][7:0] in,
@@ -341,6 +343,7 @@ Conv2D#(.N(N)) conv2d(
 localparam Idle=0, Send_Conv=1, Recv_Conv=2, Writing=3;
 
 logic[1:0] st, nxt_st;
+assign state = st;
 always_ff @(posedge clk) begin
   if (reset) st <= '0;
   else st <= nxt_st;
@@ -354,14 +357,17 @@ always_comb begin
     end
     Send_Conv: if (conv_ready_i) nxt_st = Recv_Conv;
     Recv_Conv: begin
-      if (valid_o) begin
+      if (conv_valid_o) begin
         if (last_chunk) nxt_st = Writing;
         else nxt_st = Send_Conv;
       end
     end
-    Writing: if (ready_o) nxt_st = Recv_Conv;
+    Writing: if (ready_o) nxt_st = Idle;
   endcase
 end
+
+// Send the ready signal to the convolution module.
+assign conv_ready_o = st == Recv_Conv;
 
 // The current image we are working on. We latch the value when a valid input
 // is accepted.
