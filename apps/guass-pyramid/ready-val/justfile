@@ -1,0 +1,57 @@
+# Justfile for Conv2D testbench
+
+# Common Verilator flags
+VFLAGS := "--binary --timing"
+VFLAGS_TRACE := "--binary --timing --trace"
+VFLAGS_LINT := "-Wall --lint-only"
+SOURCES := "conv2d_tb.sv valid-hold.sv"
+
+# Default target
+default: build
+
+# Build the testbench with Verilator
+build:
+    verilator {{VFLAGS}} -o sim {{SOURCES}}
+
+# Build with VCD tracing support
+build-trace:
+    verilator {{VFLAGS_TRACE}} -o sim {{SOURCES}}
+
+# Lint the files
+lint:
+    verilator {{VFLAGS_LINT}} {{SOURCES}}
+
+# Run the simulation
+run: build
+    ./obj_dir/sim
+
+# Run with VCD tracing
+run-trace: build-trace
+    ./obj_dir/sim
+
+# Clean build artifacts
+clean:
+    rm -rf obj_dir *.vcd tests/*_n*.sv tests/*_d*_n*.sv
+
+# Test with different N values (with VCD tracing)
+# Test a specific N value with custom name
+test-n N:
+    sed 's/parameter N = 4;/parameter N = {{N}};/' tests/conv2d_tb.sv > tests/conv2d_tb_n{{N}}.sv
+    verilator {{VFLAGS_TRACE}} -o sim_n{{N}} tests/conv2d_tb_n{{N}}.sv valid-hold.sv
+    ./obj_dir/sim_n{{N}}
+    @[ -f conv2d_tb.vcd ] && mv conv2d_tb.vcd conv2d_tb_n{{N}}.vcd || true
+    rm tests/conv2d_tb_n{{N}}.sv
+
+# Test Blur module with specific D and N values
+test-blur D N:
+    @echo "Testing Blur with D={{D}}, N={{N}}"
+    @if [ {{D}} -lt 4 ]; then echo "Error: D must be >= 4"; exit 1; fi
+    sed 's/parameter D = 8;/parameter D = {{D}};/' tests/blur_tb.sv > tests/blur_tb_d{{D}}_n{{N}}.sv
+    sed -i '' 's/parameter N = 4;/parameter N = {{N}};/' tests/blur_tb_d{{D}}_n{{N}}.sv
+    verilator {{VFLAGS_TRACE}} -o sim_blur_d{{D}}_n{{N}} tests/blur_tb_d{{D}}_n{{N}}.sv valid-hold.sv
+    ./obj_dir/sim_blur_d{{D}}_n{{N}}
+    @[ -f blur_tb.vcd ] && mv blur_tb.vcd blur_tb_d{{D}}_n{{N}}.vcd || true
+    rm tests/blur_tb_d{{D}}_n{{N}}.sv
+
+# Quick blur test with default parameters
+test-blur-default: (test-blur "8" "4")

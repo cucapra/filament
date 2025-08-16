@@ -125,7 +125,8 @@ module Conv2D#(
 
 // Interface with the convolution module
 logic conv_valid_i, conv_valid_o;
-logic[N-1:0][7:0] conv_out, conv_in;
+logic[N-1:0][7:0] conv_out;
+logic[N-1:0][7:0] conv_in;
 AetherlingConv#(.N(N)) Conv(
   .clk, .reset,
   .in(conv_in),
@@ -328,7 +329,7 @@ module Blur#(
 // Should apply blur kernel to each pixel neighborhood and manage ready/valid protocol
 
 logic conv_ready_i, conv_ready_o, conv_valid_i, conv_valid_o;
-logic[15:0][7:0] conv_in, conv_out;
+logic[N-1:0][7:0] conv_in, conv_out;
 
 Conv2D#(.N(N)) conv2d(
   .clk, .reset,
