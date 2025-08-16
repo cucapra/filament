@@ -276,17 +276,127 @@ always_comb begin
 end
 endmodule
 
+// Upsample by inserting zeros between pixels (opposite of downsample)
+// Takes a 4x4 input and produces an 8x8 output with zeros interpolated
+// Implementation: Place input pixels at even indices, fill odd indices with zeros
+module Upsample#(
+  parameter D0 = 4,
+  parameter D1 = 4,
+  parameter W = 8
+) (
+  input logic[D0-1:0][D1-1:0][W-1:0] in,
+  output logic[2*D0-1:0][2*D1-1:0][W-1:0] out
+);
+
+always_comb begin
+  // Initialize all outputs to zero
+  out = '0;
+
+  // Place input pixels at even positions [2*i][2*j]
+  for (int i = 0; i < D0; i++) begin
+    for (int j = 0; j < D1; j++) begin
+      out[2*i][2*j] = in[i][j];
+      // out[2*i+1][2*j], out[2*i][2*j+1], out[2*i+1][2*j+1] remain zero
+    end
+  end
+end
+
+endmodule
+
+// Gaussian blur convolution module
+// Applies a blur kernel to reduce noise and create pyramid levels
+// Should implement a 3x3 or 5x5 Gaussian kernel convolution
+module Blur#(
+  parameter D0 = 8,
+  parameter D1 = 8,
+  parameter W = 8
+) (
+  input logic clk,
+  input logic reset,
+
+  input logic valid_i,
+  output logic ready_i,
+  input logic[D0-1:0][D1-1:0][W-1:0] in,
+
+  output logic valid_o,
+  input logic ready_o,
+  output logic[D0-2:0][D1-2:0][W-1:0] out  // Convolution reduces size by kernel-1
+);
+// TODO: Implement Gaussian blur convolution with proper state machine
+// Should apply blur kernel to each pixel neighborhood and manage ready/valid protocol
+endmodule
+
+// Blend two pyramid levels with weighted combination
+// Implements: 0.75 * level0 + 0.25 * level1 (3/4 + 1/4 blend)
+module Blend#(
+  parameter D0 = 8,
+  parameter D1 = 8,
+  parameter W = 8
+) (
+  input logic[D0-1:0][D1-1:0][W-1:0] level0,
+  input logic[D0-1:0][D1-1:0][W-1:0] level1,
+  output logic[D0-1:0][D1-1:0][W-1:0] out
+);
+
+always_comb begin
+  for (int i = 0; i < D0; i++) begin
+    for (int j = 0; j < D1; j++) begin
+      // Calculate 3/4 * level0: multiply by 3, then divide by 4
+      logic[W+1:0] level0_times_3 = level0[i][j] * 3;
+      logic[W-1:0] level0_three_quarters = level0_times_3[W-1:0] >> 2;
+
+      // Calculate 1/4 * level1: divide by 4
+      logic[W-1:0] level1_quarter = level1[i][j] >> 2;
+
+      // Add the weighted components
+      out[i][j] = level0_three_quarters + level1_quarter;
+    end
+  end
+end
+
+endmodule
+
 module Pyramid (
   input logic clk,
   input logic reset,
 
   input logic valid_i,
   output logic ready_i,
-  input logic[15:0][7:0] in,
+  input logic[7:0][7:0][7:0] in,  // 8x8 input image
 
   output logic valid_o,
   input logic ready_o,
-  output logic[15:0][7:0] out
+  output logic[7:0][7:0][7:0] out  // 8x8 output image
 );
+
+// TODO: Implement Gaussian pyramid pipeline based on blur.fil lines 308-368
+//
+// Pipeline structure:
+// 1. LEVEL 0 PATH (blur.fil lines 320-327):
+//    - Pad input 8x8 → 10x10 using Pad module
+//    - Blur 10x10 → 8x8 using Blur module
+//    - Store level0 result for final blending
+//
+// 2. LEVEL 1 PATH (blur.fil lines 329-339):
+//    - Downsample level0 8x8 → 4x4 using Downsample module
+//    - Pad 4x4 → 6x6 using Pad module
+//    - Blur 6x6 → 4x4 using Blur module
+//    - Store level1 result
+//
+// 3. UPSAMPLE PATH (blur.fil lines 341-351):
+//    - Upsample level1 4x4 → 8x8 using Upsample module
+//    - Pad 8x8 → 10x10 using Pad module
+//    - Blur 10x10 → 8x8 using Blur module
+//    - Result is upsampled level1
+//
+// 4. BLENDING (blur.fil lines 353-360):
+//    - Blend level0 and upsampled level1 using Blend module
+//    - Formula: 0.75 * level0 + 0.25 * level1
+//    - Output final 8x8 result
+//
+// State machine needed to coordinate:
+// - Sequential processing through pipeline stages
+// - Proper ready/valid handshaking between modules
+// - Timing alignment for final blending step
 
 endmodule
