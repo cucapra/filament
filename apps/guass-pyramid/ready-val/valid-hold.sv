@@ -375,20 +375,47 @@ end
 // Index management logic: determines which part of the input image we are
 // working on and where to place the output;
 
-// TODO: define correct widths for idx and nxt_idx. we probably need two
-// indices.
-logic[31:0] idx, nxt_idx;
+// Calculate tile dimensions
+localparam D0_BITS = $clog2(D0);
+localparam D1_BITS = $clog2(D1);
+localparam bit[D0_BITS:0] TILES_Y = (D0-2)/2;  // Number of tile rows
+localparam bit[D1_BITS:0] TILES_X = (D1-2)/2;  // Number of tile columns
 
-wire last_chunk; // TODO: Condition for when we have reached the last index.
+// Two explicit tile indices to avoid division/modulo
+logic[D0_BITS:0] tile_i, nxt_tile_i;
+logic[D1_BITS:0] tile_j, nxt_tile_j;
+
+// Last tile condition
+wire last_chunk = (tile_i == TILES_Y-1) && (tile_j == TILES_X-1);
 
 always_comb begin
-  nxt_idx = idx;
-  if (st == Recv_Conv && conv_valid_o) nxt_idx = idx + 1;
-  else if (st == Writing && ready_o) nxt_idx = 0;
+  nxt_tile_i = tile_i;
+  nxt_tile_j = tile_j;
+
+  if (st == Recv_Conv && conv_valid_o) begin
+    if (tile_j == TILES_X-1) begin
+      // End of row, move to next row, reset column
+      nxt_tile_j = 0;
+      nxt_tile_i = tile_i + 1;
+    end else begin
+      // Move to next column in same row
+      nxt_tile_j = tile_j + 1;
+    end
+  end else if (st == Writing && ready_o) begin
+    // Reset to beginning
+    nxt_tile_i = 0;
+    nxt_tile_j = 0;
+  end
 end
+
 always_ff @(posedge clk) begin
-  if (reset) idx <= '0;
-  else idx <= nxt_idx;
+  if (reset) begin
+    tile_i <= '0;
+    tile_j <= '0;
+  end else begin
+    tile_i <= nxt_tile_i;
+    tile_j <= nxt_tile_j;
+  end
 end
 
 
@@ -398,14 +425,29 @@ always_comb begin
   else conv_valid_i = 0;
 end
 always_comb begin
-  // TODO: define the input pixels to be sent.
+  conv_in = '0;
+  // Extract 4x4 window starting at (2*tile_i, 2*tile_j)
+  // Flatten to 16 elements for Conv2D
+  for (int r = 0; r < 4; r++) begin
+    for (int c = 0; c < 4; c++) begin
+      conv_in[r*4 + c] = image[2*tile_i + r][2*tile_j + c];
+    end
+  end
 end
 
 // Capture output when valid
 logic[D0-3:0][D1-3:0][7:0] tmp_out;
 always_comb begin
+  tmp_out = out; // Preserve existing values
   if (st == Recv_Conv && conv_valid_o) begin
-    // TODO: capture the pixels in the right location
+    // Conv2D returns 16 values as 4x4, extract center 2x2
+    // Place at output[2*tile_i:2*tile_i+1][2*tile_j:2*tile_j+1]
+    // Center 2x2 from 4x4 are at indices [1][1], [1][2], [2][1], [2][2]
+    // In flattened array: 5, 6, 9, 10
+    tmp_out[2*tile_i][2*tile_j]     = conv_out[5];  // [1][1]
+    tmp_out[2*tile_i][2*tile_j+1]   = conv_out[6];  // [1][2]
+    tmp_out[2*tile_i+1][2*tile_j]   = conv_out[9];  // [2][1]
+    tmp_out[2*tile_i+1][2*tile_j+1] = conv_out[10]; // [2][2]
   end
 end
 always_ff @(posedge clk) begin
