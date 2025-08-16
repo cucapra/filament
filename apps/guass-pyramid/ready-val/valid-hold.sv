@@ -309,21 +309,113 @@ endmodule
 module Blur#(
   parameter D0 = 8,
   parameter D1 = 8,
-  parameter W = 8
+  parameter N = 1
 ) (
   input logic clk,
   input logic reset,
 
   input logic valid_i,
   output logic ready_i,
-  input logic[D0-1:0][D1-1:0][W-1:0] in,
+  input logic[D0-1:0][D1-1:0][7:0] in,
 
   output logic valid_o,
   input logic ready_o,
-  output logic[D0-2:0][D1-2:0][W-1:0] out  // Convolution reduces size by kernel-1
+  output logic[D0-3:0][D1-3:0][7:0] out  // Convolution reduces size by kernel-2
 );
 // TODO: Implement Gaussian blur convolution with proper state machine
 // Should apply blur kernel to each pixel neighborhood and manage ready/valid protocol
+
+logic conv_ready_i, conv_ready_o, conv_valid_i, conv_valid_o;
+logic[15:0][7:0] conv_in, conv_out;
+
+Conv2D#(.N(N)) conv2d(
+  .clk, .reset,
+  .valid_i(conv_valid_i),
+  .valid_o(conv_valid_o),
+  .ready_i(conv_ready_i),
+  .ready_o(conv_ready_o),
+  .i(conv_in),
+  .o(conv_out)
+);
+
+localparam Idle=0, Send_Conv=1, Recv_Conv=2, Writing=3;
+
+logic[1:0] st, nxt_st;
+always_ff @(posedge clk) begin
+  if (reset) st <= '0;
+  else st <= nxt_st;
+end
+
+always_comb begin
+  nxt_st = st;
+  case (st)
+    Idle: begin  // If there is a new input, we start processing it.
+      if (valid_i) nxt_st = Send_Conv;
+    end
+    Send_Conv: if (conv_ready_i) nxt_st = Recv_Conv;
+    Recv_Conv: begin
+      if (valid_o) begin
+        if (last_chunk) nxt_st = Writing;
+        else nxt_st = Send_Conv;
+      end
+    end
+    Writing: if (ready_o) nxt_st = Recv_Conv;
+  endcase
+end
+
+// The current image we are working on. We latch the value when a valid input
+// is accepted.
+logic[D1-1:0][D1-1:0][7:0] image;
+always_ff @(posedge clk) begin
+  if (reset) image <= '0;
+  else if (st == Idle && valid_i) image <= in;
+  else image <= image;
+end
+
+// Index management logic: determines which part of the input image we are
+// working on and where to place the output;
+
+// TODO: define correct widths for idx and nxt_idx. we probably need two
+// indices.
+logic[31:0] idx, nxt_idx;
+
+wire last_chunk; // TODO: Condition for when we have reached the last index.
+
+always_comb begin
+  nxt_idx = idx;
+  if (st == Recv_Conv && conv_valid_o) nxt_idx = idx + 1;
+  else if (st == Writing && ready_o) nxt_idx = 0;
+end
+always_ff @(posedge clk) begin
+  if (reset) idx <= '0;
+  else idx <= nxt_idx;
+end
+
+
+// Set up the input for the convolution
+always_comb begin
+  if (st == Send_Conv) conv_valid_i = 1;
+  else conv_valid_i = 0;
+end
+always_comb begin
+  // TODO: define the input pixels to be sent.
+end
+
+// Capture output when valid
+logic[D0-3:0][D1-3:0][7:0] tmp_out;
+always_comb begin
+  if (st == Recv_Conv && conv_valid_o) begin
+    // TODO: capture the pixels in the right location
+  end
+end
+always_ff @(posedge clk) begin
+  out <= tmp_out;
+end
+
+
+assign ready_i = st == Idle;
+assign valid_o = st == Writing;
+
 endmodule
 
 // Blend two pyramid levels with weighted combination
