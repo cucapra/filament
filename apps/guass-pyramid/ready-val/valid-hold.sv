@@ -510,6 +510,71 @@ module Pyramid (
   output logic[7:0][7:0][7:0] out  // 8x8 output image
 );
 
+localparam bit[3:0]
+  Idle=0,
+  Level0_Send=1, Level0_Recv=2,
+  Level1_Send=3, Level1_Recv=4,
+  Upsample_Send=5, Upsample_Recv=6,
+  Blend=7,
+  Writing=8;
+
+logic[3:0] st, nxt_st;
+
+always_comb begin
+  nxt_st = st;
+  // All signals are deasserted unless in specific state.
+  blur0_valid_i = 0;
+  blur0_ready_o = 0;
+  blur1_valid_i = 0;
+  blur1_ready_o = 0;
+  blur_up_valid_i = 0;
+  blur_up_ready_o = 0;
+
+  case (st)
+    Idle: begin
+      if (valid_i) nxt_st = Level0_Send;
+    end
+    Level0_Send: begin
+      blur0_valid_i = 1;
+      if (blur0_ready_i) nxt_st = Level0_Recv;
+    end
+    Level0_Recv: begin
+      blur0_ready_o = 1;
+      if (blur0_valid_o) nxt_st = Level1_Send;
+    end
+    Level1_Send: begin
+      blur1_valid_i = 1;
+      if (blur1_ready_i) nxt_st = Level1_Recv;
+    end
+    Level1_Recv: begin
+      blur1_ready_o = 1;
+      if (blur1_valid_o) nxt_st = Upsample_Send;
+    end
+    Upsample_Send: begin
+      blur_up_valid_i = 1;
+      if (blur_up_ready_i) nxt_st = Upsample_Recv;
+    end
+    Upsample_Recv: begin
+      blur_up_ready_o = 1;
+      if (blur_up_valid_o) nxt_st = Blend;
+    end
+    Blend: begin
+    end
+    Writing: begin
+    end
+    default: nxt_st = Idle;    // Should not happen.
+  endcase
+end
+
+// Initial state: Latch the input image when valid_i is asserted.
+logic[7:0][7:0][7:0] in_stable;
+always_ff @(posedge clk) begin
+  if (st == Idle && valid_i)
+    in_stable <= in;
+  else
+    in_stable <= in_stable;
+end
+
 // TODO: Implement Gaussian pyramid pipeline based on blur.fil lines 308-368
 //
 // Pipeline structure:
@@ -517,6 +582,33 @@ module Pyramid (
 //    - Pad input 8x8 → 10x10 using Pad module
 //    - Blur 10x10 → 8x8 using Blur module
 //    - Store level0 result for final blending
+
+// Padding is combinational so we forward the signal directly.
+wire[7:0][7:0][7:0] pad0_in = in_stable;
+logic [9:0][9:0][7:0] pad0_out;
+Pad#(.W(8), .D0(8), .D1(8)) pad0(.in(pad0_in), .out(pad0_out));
+
+logic blur0_valid_i, blur0_valid_o, blur0_ready_i, blur0_ready_o;
+logic[7:0][7:0][7:0] blur0_out;
+logic[1:0] blur0_st;
+
+Blur#(.D0(10), .D1(10)) blur0(
+  .clk, .reset, .state(blur0_st),
+  .in(pad0_out),   .valid_i(blur0_valid_i), .ready_i(blur0_ready_i),
+  .out(blur0_out), .valid_o(blur0_valid_o), .ready_o(blur0_ready_o)
+);
+
+
+// Store the image produced by the first level once valid is asserted
+// in the right state.
+logic[7:0][7:0][7:0] blur0_out_stable;
+always_ff @(posedge clk) begin
+  if (st == Level0_Recv && blur0_valid_o)
+    blur0_out_stable <= blur0_out;
+  else
+    blur0_out_stable <= blur0_out_stable;
+end
+
 //
 // 2. LEVEL 1 PATH (blur.fil lines 329-339):
 //    - Downsample level0 8x8 → 4x4 using Downsample module
@@ -524,12 +616,18 @@ module Pyramid (
 //    - Blur 6x6 → 4x4 using Blur module
 //    - Store level1 result
 //
+logic blur1_valid_i, blur1_valid_o, blur1_ready_i, blur1_ready_o;
+
+// TODO: Instantiate downsample, pad, and blur1
+
 // 3. UPSAMPLE PATH (blur.fil lines 341-351):
 //    - Upsample level1 4x4 → 8x8 using Upsample module
 //    - Pad 8x8 → 10x10 using Pad module
 //    - Blur 10x10 → 8x8 using Blur module
 //    - Result is upsampled level1
-//
+logic blur_up_valid_i, blur_up_valid_o, blur_up_ready_i, blur_up_ready_o;
+
+
 // 4. BLENDING (blur.fil lines 353-360):
 //    - Blend level0 and upsampled level1 using Blend module
 //    - Formula: 0.75 * level0 + 0.25 * level1
