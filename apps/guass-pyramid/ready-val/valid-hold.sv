@@ -372,7 +372,7 @@ assign conv_ready_o = st == Recv_Conv;
 
 // The current image we are working on. We latch the value when a valid input
 // is accepted.
-logic[D1-1:0][D1-1:0][7:0] image;
+logic[D0-1:0][D1-1:0][7:0] image;
 always_ff @(posedge clk) begin
   if (reset) image <= '0;
   else if (st == Idle && valid_i) image <= in;
@@ -484,7 +484,9 @@ always_comb begin
     for (int j = 0; j < D1; j++) begin
       // Calculate 3/4 * level0: multiply by 3, then divide by 4
       logic[W+1:0] level0_times_3 = level0[i][j] * 3;
-      logic[W-1:0] level0_three_quarters = level0_times_3[W-1:0] >> 2;
+      logic[W-1:0] level0_times_3_sat =
+        |level0_times_3[W+1:W] ? '1 : level0_times_3[W-1:0];
+      logic[W-1:0] level0_three_quarters = level0_times_3_sat >> 2;
 
       // Calculate 1/4 * level1: divide by 4
       logic[W-1:0] level1_quarter = level1[i][j] >> 2;
@@ -507,9 +509,15 @@ module Pyramid (
 
   output logic valid_o,
   input logic ready_o,
-  output logic[7:0][7:0][7:0] out  // 8x8 output image
+  output logic[7:0][7:0][7:0] out,  // 8x8 output image
+
+  // Debug signals
+  output logic[1:0] blur0_st,
+  output logic[1:0] blur1_st,
+  output logic[1:0] blur_up_st
 );
 
+// Main state machine
 localparam bit[3:0]
   Idle=0,
   Level0_Send=1, Level0_Recv=2,
@@ -519,7 +527,6 @@ localparam bit[3:0]
   Writing=8;
 
 logic[3:0] st, nxt_st;
-
 always_comb begin
   nxt_st = st;
   // All signals are deasserted unless in specific state.
@@ -567,6 +574,10 @@ always_comb begin
     default: nxt_st = Idle;    // Should not happen.
   endcase
 end
+always_ff @(posedge clk) begin
+  if (reset) st <= Idle;
+  else st <= nxt_st;
+end
 
 // Initial state: Latch the input image when valid_i is asserted.
 logic[7:0][7:0][7:0] in_stable;
@@ -592,7 +603,6 @@ Pad#(.W(8), .D0(8), .D1(8)) pad0(.in(pad0_in), .out(pad0_out));
 
 logic blur0_valid_i, blur0_valid_o, blur0_ready_i, blur0_ready_o;
 logic[7:0][7:0][7:0] blur0_out;
-logic[1:0] blur0_st;
 
 Blur#(.D0(10), .D1(10)) blur0(
   .clk, .reset, .state(blur0_st),
@@ -632,7 +642,6 @@ Pad#(.W(8), .D0(4), .D1(4)) pad1 (
 // level0_stable.
 // Should we expect it to be stable during the execution of the module?
 logic blur1_valid_i, blur1_valid_o, blur1_ready_i, blur1_ready_o;
-logic[1:0] blur1_st;
 logic[3:0][3:0][7:0] blur1_out;
 Blur#(.D0(6), .D1(6)) blur1(
   .clk, .reset, .state(blur1_st),
@@ -667,7 +676,6 @@ Pad#(.W(8), .D0(8), .D1(8)) pad_up(
 );
 
 logic blur_up_valid_i, blur_up_valid_o, blur_up_ready_i, blur_up_ready_o;
-logic[1:0] blur_up_st;
 logic[7:0][7:0][7:0] blur_up_out;
 Blur#(.D0(10), .D1(10)) blur_up(
   .clk, .reset, .state(blur_up_st),
@@ -679,7 +687,7 @@ always_ff @(posedge clk) begin
   if (reset)
     upsampled_stable <= '0;
   else if (st == Upsample_Recv && blur_up_valid_o)
-    upsampled_stable <= blur0_out;
+    upsampled_stable <= blur_up_out;
   else
     upsampled_stable <= upsampled_stable;
 end
@@ -702,6 +710,7 @@ always_ff @(posedge clk) begin
   else out <= out;
 end
 
+assign ready_i = st == Idle;
 assign valid_o = st == Writing;
 
 endmodule
