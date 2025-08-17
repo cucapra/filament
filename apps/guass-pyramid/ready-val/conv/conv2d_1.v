@@ -1,3 +1,11 @@
+/*verilator lint_off DECLFILENAME*/
+/*verilator lint_off ASCRANGE*/
+/*verilator lint_off UNUSEDPARAM*/
+/*verilator lint_off PROCASSINIT*/
+/*verilator lint_off WIDTHEXPAND*/
+/*verilator lint_off WIDTHTRUNC*/
+/*verilator lint_off UNUSEDSIGNAL*/
+/*verilator lint_off UNDRIVEN*/
 module stupleToSSeq_tSSeq_3_Int__n3 (
     input [7:0] I_0_0,
     input [7:0] I_0_1,
@@ -12643,41 +12651,71 @@ module top (
   assign valid_down = FIFO_tSSeq_16_Int__delay1_hasCEFalse_hasResetFalse_hasValidTrue_inst3_valid_down;
 endmodule
 
+/*verilator lint_on ASCRANGE*/
+/*verilator lint_on UNUSEDPARAM*/
+/*verilator lint_on PROCASSINIT*/
+/*verilator lint_on WIDTHEXPAND*/
+/*verilator lint_on WIDTHTRUNC*/
+/*verilator lint_on UNUSEDSIGNAL*/
+/*verilator lint_on UNDRIVEN*/
 module Conv2d (
     input clk,
-    input [7:0] I_0,
-    input [7:0] I_1,
-    input [7:0] I_10,
-    input [7:0] I_11,
-    input [7:0] I_12,
-    input [7:0] I_13,
-    input [7:0] I_14,
-    input [7:0] I_15,
-    input [7:0] I_2,
-    input [7:0] I_3,
-    input [7:0] I_4,
-    input [7:0] I_5,
-    input [7:0] I_6,
-    input [7:0] I_7,
-    input [7:0] I_8,
-    input [7:0] I_9,
-    output [7:0] O_0,
-    output [7:0] O_1,
-    output [7:0] O_10,
-    output [7:0] O_11,
-    output [7:0] O_12,
-    output [7:0] O_13,
-    output [7:0] O_14,
-    output [7:0] O_15,
-    output [7:0] O_2,
-    output [7:0] O_3,
-    output [7:0] O_4,
-    output [7:0] O_5,
-    output [7:0] O_6,
-    output [7:0] O_7,
-    output [7:0] O_8,
-    output [7:0] O_9
+    input valid_i,
+    input [15:0][7:0] I,
+
+    output valid_o,
+    output [15:0][7:0] O
 );
+
+logic [7:0] I_0 = I[0];
+logic [7:0] I_1 = I[1];
+logic [7:0] I_2 = I[2];
+logic [7:0] I_3 = I[3];
+logic [7:0] I_4 = I[4];
+logic [7:0] I_5 = I[5];
+logic [7:0] I_6 = I[6];
+logic [7:0] I_7 = I[7];
+logic [7:0] I_8 = I[8];
+logic [7:0] I_9 = I[9];
+logic [7:0] I_10 = I[10];
+logic [7:0] I_11 = I[11];
+logic [7:0] I_12 = I[12];
+logic [7:0] I_13 = I[13];
+logic [7:0] I_14 = I[14];
+logic [7:0] I_15 = I[15];
+
+logic [7:0] O_0;
+assign O[0] = O_0;
+logic [7:0] O_1;
+assign O[1] = O_1;
+logic [7:0] O_2;
+assign O[2] = O_2;
+logic [7:0] O_3;
+assign O[3] = O_3;
+logic [7:0] O_4;
+assign O[4] = O_4;
+logic [7:0] O_5;
+assign O[5] = O_5;
+logic [7:0] O_6;
+assign O[6] = O_6;
+logic [7:0] O_7;
+assign O[7] = O_7;
+logic [7:0] O_8;
+assign O[8] = O_8;
+logic [7:0] O_9;
+assign O[9] = O_9;
+logic [7:0] O_10;
+assign O[10] = O_10;
+logic [7:0] O_11;
+assign O[11] = O_11;
+logic [7:0] O_12;
+assign O[12] = O_12;
+logic [7:0] O_13;
+assign O[13] = O_13;
+logic [7:0] O_14;
+assign O[14] = O_14;
+logic [7:0] O_15;
+assign O[15] = O_15;
 
 top t (
     .clk,
@@ -12713,8 +12751,8 @@ top t (
     .O_7,
     .O_8,
     .O_9,
-    .valid_up(1'd1),
-    .valid_down()
+    .valid_up(valid_i),
+    .valid_down(valid_o)
 );
 
 endmodule

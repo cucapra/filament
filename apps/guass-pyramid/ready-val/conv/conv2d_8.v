@@ -1,3 +1,11 @@
+/*verilator lint_off DECLFILENAME*/
+/*verilator lint_off ASCRANGE*/
+/*verilator lint_off UNUSEDPARAM*/
+/*verilator lint_off PROCASSINIT*/
+/*verilator lint_off WIDTHEXPAND*/
+/*verilator lint_off WIDTHTRUNC*/
+/*verilator lint_off UNUSEDSIGNAL*/
+/*verilator lint_off UNDRIVEN*/
 module stupleToSSeq_tSSeq_3_Int__n3 (
     input [7:0] I_0_0,
     input [7:0] I_0_1,
@@ -5341,18 +5349,34 @@ module top (
   assign valid_down = FIFO_tTSeq_8_0_SSeq_2_Int___delay1_hasCEFalse_hasResetFalse_hasValidTrue_inst3_valid_down;
 endmodule
 
+/*verilator lint_on ASCRANGE*/
+/*verilator lint_on UNUSEDPARAM*/
+/*verilator lint_on PROCASSINIT*/
+/*verilator lint_on WIDTHEXPAND*/
+/*verilator lint_on WIDTHTRUNC*/
+/*verilator lint_on UNUSEDSIGNAL*/
+/*verilator lint_on UNDRIVEN*/
 module Conv2d (
     input clk,
-    input [7:0] I_0,
-    input [7:0] I_1,
-    output [7:0] O_0,
-    output [7:0] O_1
+    input valid_i,
+    input [1:0][7:0] I,
+
+    output valid_o,
+    output [1:0][7:0] O
 );
+
+logic [7:0] I_0 = I[0];
+logic [7:0] I_1 = I[1];
+
+logic [7:0] O_0;
+assign O[0] = O_0;
+logic [7:0] O_1;
+assign O[1] = O_1;
 
 top t (
     .clk(clk),
-    .valid_up(1'd1),
-    .valid_down(),
+    .valid_up(valid_i),
+    .valid_down(valid_o),
     .I_0(I_0),
     .I_1(I_1),
     .O_0(O_0),

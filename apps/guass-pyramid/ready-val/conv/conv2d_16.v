@@ -1,3 +1,11 @@
+/*verilator lint_off DECLFILENAME*/
+/*verilator lint_off ASCRANGE*/
+/*verilator lint_off UNUSEDPARAM*/
+/*verilator lint_off PROCASSINIT*/
+/*verilator lint_off WIDTHEXPAND*/
+/*verilator lint_off WIDTHTRUNC*/
+/*verilator lint_off UNUSEDSIGNAL*/
+/*verilator lint_off UNDRIVEN*/
 module stupleToSSeq_tInt_n3 (
     input [7:0] I_0,
     input [7:0] I_1,
@@ -4809,18 +4817,31 @@ module top (
   assign valid_down = FIFO_tTSeq_16_0_SSeq_1_Int___delay1_hasCEFalse_hasResetFalse_hasValidTrue_inst3_valid_down;
 endmodule
 
+/*verilator lint_on ASCRANGE*/
+/*verilator lint_on PROCASSINIT*/
+/*verilator lint_on WIDTHEXPAND*/
+/*verilator lint_on WIDTHTRUNC*/
+/*verilator lint_on UNUSEDSIGNAL*/
+/*verilator lint_on UNDRIVEN*/
 module Conv2d (
     input clk,
-    input [7:0] I_0,
-    output [7:0] O_0
+    input valid_i,
+    input [7:0] I,
+
+    output valid_o,
+    output [7:0] O
 );
+
+logic [7:0] I_0 = I;
+logic [7:0] O_0;
+assign O = O_0;
 
 top t (
     .clk(clk),
-    .valid_up(1'd1),
+    .valid_up(valid_i),
     .I_0(I_0),
     .O_0(O_0),
-    .valid_down()
+    .valid_down(valid_o)
 );
 
 endmodule
