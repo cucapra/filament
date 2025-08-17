@@ -55,3 +55,20 @@ test-blur D N:
 
 # Quick blur test with default parameters
 test-blur-default: (test-blur "8" "4")
+
+# Test Pyramid module with specific N values for each blur stage
+test-pyramid blur0_n blur1_n blur_up_n:
+    @echo "Testing Pyramid with Blur0_N={{blur0_n}}, Blur1_N={{blur1_n}}, BlurUp_N={{blur_up_n}}"
+    sed 's/parameter Blur0_N = 16;/parameter Blur0_N = {{blur0_n}};/' tests/pyramid_tb.sv > tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv
+    sed -i '' 's/parameter Blur1_N = 16;/parameter Blur1_N = {{blur1_n}};/' tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv
+    sed -i '' 's/parameter BlurUp_N = 16;/parameter BlurUp_N = {{blur_up_n}};/' tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv
+    verilator {{VFLAGS_TRACE}} -o sim_pyramid_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}} tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv valid-hold.sv
+    ./obj_dir/sim_pyramid_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}
+    @[ -f pyramid_tb.vcd ] && mv pyramid_tb.vcd pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.vcd || true
+    rm tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv
+
+# Quick pyramid test with default parameters
+test-pyramid-default: (test-pyramid "16" "16" "16")
+
+# Test pyramid with small N values for faster simulation
+test-pyramid-fast: (test-pyramid "4" "4" "4")

@@ -511,7 +511,11 @@ end
 
 endmodule
 
-module Pyramid (
+module Pyramid #(
+  parameter Blur0_N = 16,
+  parameter Blur1_N = 16,
+  parameter BlurUp_N = 16
+) (
   input logic clk,
   input logic reset,
 
@@ -525,6 +529,7 @@ module Pyramid (
 
   /// Debug signals
   // Blur states
+  output logic[3:0] st,
   output logic[1:0] blur0_st,
   output logic[1:0] blur1_st,
   output logic[1:0] blur_up_st,
@@ -544,7 +549,7 @@ localparam bit[3:0]
   Blend=7,
   Writing=8;
 
-logic[3:0] st, nxt_st;
+logic[3:0] nxt_st;
 always_comb begin
   nxt_st = st;
   // All signals are deasserted unless in specific state.
@@ -622,7 +627,7 @@ Pad#(.W(8), .D0(8), .D1(8)) pad0(.in(pad0_in), .out(pad0_out));
 logic blur0_valid_i, blur0_valid_o, blur0_ready_i, blur0_ready_o;
 logic[7:0][7:0][7:0] blur0_out;
 
-Blur#(.D0(10), .D1(10)) blur0(
+Blur#(.N(Blur0_N), .D0(10), .D1(10)) blur0(
   .clk, .reset, .state(blur0_st),
   .in(pad0_out),   .valid_i(blur0_valid_i), .ready_i(blur0_ready_i),
   .out(blur0_out), .valid_o(blur0_valid_o), .ready_o(blur0_ready_o)
@@ -660,7 +665,7 @@ Pad#(.W(8), .D0(4), .D1(4)) pad1 (
 // Should we expect it to be stable during the execution of the module?
 logic blur1_valid_i, blur1_valid_o, blur1_ready_i, blur1_ready_o;
 logic[3:0][3:0][7:0] blur1_out;
-Blur#(.D0(6), .D1(6)) blur1(
+Blur#(.N(Blur1_N), .D0(6), .D1(6)) blur1(
   .clk, .reset, .state(blur1_st),
   .in(pad1_out),   .valid_i(blur1_valid_i), .ready_i(blur1_ready_i),
   .out(blur1_out), .valid_o(blur1_valid_o), .ready_o(blur1_ready_o)
@@ -693,7 +698,7 @@ Pad#(.W(8), .D0(8), .D1(8)) pad_up(
 
 logic blur_up_valid_i, blur_up_valid_o, blur_up_ready_i, blur_up_ready_o;
 logic[7:0][7:0][7:0] blur_up_out;
-Blur#(.D0(10), .D1(10)) blur_up(
+Blur#(.N(BlurUp_N), .D0(10), .D1(10)) blur_up(
   .clk, .reset, .state(blur_up_st),
   .in(pad_up_out),   .valid_i(blur_up_valid_i), .ready_i(blur_up_ready_i),
   .out(blur_up_out), .valid_o(blur_up_valid_o), .ready_o(blur_up_ready_o)
