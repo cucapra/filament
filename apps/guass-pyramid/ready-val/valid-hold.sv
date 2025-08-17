@@ -523,10 +523,16 @@ module Pyramid (
   input logic ready_o,
   output logic[7:0][7:0][7:0] out,  // 8x8 output image
 
-  // Debug signals
+  /// Debug signals
+  // Blur states
   output logic[1:0] blur0_st,
   output logic[1:0] blur1_st,
-  output logic[1:0] blur_up_st
+  output logic[1:0] blur_up_st,
+
+  // Latched outputs
+  output logic[7:0][7:0][7:0] level0_stable,
+  output logic[3:0][3:0][7:0] level1_stable,
+  output logic[7:0][7:0][7:0] upsampled_stable
 );
 
 // Main state machine
@@ -625,7 +631,6 @@ Blur#(.D0(10), .D1(10)) blur0(
 
 // Store the image produced by the first level once valid is asserted
 // in the right state.
-logic[7:0][7:0][7:0] level0_stable;
 always_ff @(posedge clk) begin
   if (reset)
     level0_stable <= '0;
@@ -661,14 +666,13 @@ Blur#(.D0(6), .D1(6)) blur1(
   .out(blur1_out), .valid_o(blur1_valid_o), .ready_o(blur1_ready_o)
 );
 
-logic[3:0][3:0][7:0] level1_out_stable;
 always_ff @(posedge clk) begin
   if (reset)
-    level1_out_stable <= '0;
+    level1_stable <= '0;
   else if (st == Level1_Recv && blur1_valid_o)
-    level1_out_stable <= blur1_out;
+    level1_stable <= blur1_out;
   else
-    level1_out_stable <= level1_out_stable;
+    level1_stable <= level1_stable;
 end
 
 // 3. UPSAMPLE PATH (blur.fil lines 341-351):
@@ -679,7 +683,7 @@ end
 
 logic[7:0][7:0][7:0] upsample_out;
 Upsample#(.W(8), .D0(4), .D1(4)) upsample(
-  .in(level1_out_stable), .out(upsample_out)
+  .in(level1_stable), .out(upsample_out)
 );
 
 logic[9:0][9:0][7:0] pad_up_out;
@@ -694,7 +698,6 @@ Blur#(.D0(10), .D1(10)) blur_up(
   .in(pad_up_out),   .valid_i(blur_up_valid_i), .ready_i(blur_up_ready_i),
   .out(blur_up_out), .valid_o(blur_up_valid_o), .ready_o(blur_up_ready_o)
 );
-logic[7:0][7:0][7:0] upsampled_stable;
 always_ff @(posedge clk) begin
   if (reset)
     upsampled_stable <= '0;
