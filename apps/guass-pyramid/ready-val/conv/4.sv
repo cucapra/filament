@@ -6957,7 +6957,7 @@ endmodule
 /*verilator lint_on WIDTHTRUNC*/
 /*verilator lint_on UNUSEDSIGNAL*/
 /*verilator lint_on UNDRIVEN*/
-module Conv2d (
+module AetherlingConv #(parameter N = 4) (
     input clk,
     input valid_i,
     input [3:0][7:0] I,
@@ -6965,6 +6965,10 @@ module Conv2d (
     output valid_o,
     output [3:0][7:0] O
 );
+
+generate
+  if (N != 4) $error("Incorrect binding for conv 4: %0d", N);
+endgenerate
 
 logic [7:0] I_0 = I[0];
 logic [7:0] I_1 = I[1];

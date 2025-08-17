@@ -12658,7 +12658,7 @@ endmodule
 /*verilator lint_on WIDTHTRUNC*/
 /*verilator lint_on UNUSEDSIGNAL*/
 /*verilator lint_on UNDRIVEN*/
-module Conv2d (
+module AetherlingConv #(parameter N = 16) (
     input clk,
     input valid_i,
     input [15:0][7:0] I,
@@ -12666,6 +12666,10 @@ module Conv2d (
     output valid_o,
     output [15:0][7:0] O
 );
+
+generate
+  if (N != 16) $error("Incorrect binding for conv 16: %0d", N);
+endgenerate
 
 logic [7:0] I_0 = I[0];
 logic [7:0] I_1 = I[1];

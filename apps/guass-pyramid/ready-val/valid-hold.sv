@@ -71,41 +71,6 @@ assign out = val;
 
 endmodule
 
-// Wrapper for aetherling module that accepts N chunks at a time for a 16x16
-/* verilator lint_off UNDRIVEN */
-/* verilator lint_off UNUSED */
-module AetherlingConv#(
-  parameter N = 16
-) (
-  input logic clk,
-  input logic reset,
-
-  input logic[N-1:0][7:0] in,
-  input logic valid_i,
-
-  output logic[N-1:0][7:0] out,
-  output logic valid_o
-);
-generate
-// Increment by two
-for (genvar i = 0; i < N; i++) begin : Loop
-  always_ff @(posedge clk) begin
-    if (reset) out[i] <= '0;
-    else out[i] <= in[i] + 2;
-  end
-end
-
-always_ff @(posedge clk) begin
-  if (reset) valid_o <= '0;
-  else valid_o <= valid_i;
-end
-
-endgenerate
-
-endmodule
-/* verilator lint_on UNUSED */
-/* verilator lint_on UNDRIVEN */
-
 module Conv2D#(
   parameter N = 16
 ) (
