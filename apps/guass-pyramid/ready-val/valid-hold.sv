@@ -461,6 +461,18 @@ always_ff @(posedge clk) begin
   out <= tmp_out;
 end
 
+// Explicitly ignore the unused part of the results.
+/* verilator lint_off UNUSEDSIGNAL */
+logic[3:0][7:0] ignore_top, ignore_bot;
+logic[1:0][7:0] ignore_r, ignore_l;
+/* verilator lint_on UNUSEDSIGNAL */
+
+assign ignore_l[0] = conv_out[4];
+assign ignore_l[1] = conv_out[8];
+assign ignore_r[0] = conv_out[7];
+assign ignore_r[1] = conv_out[11];
+assign ignore_top = conv_out[3:0];
+assign ignore_bot = conv_out[15:12];
 
 assign ready_i = st == Idle;
 assign valid_o = st == Writing;
