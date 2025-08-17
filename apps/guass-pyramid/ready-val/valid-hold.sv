@@ -559,8 +559,10 @@ always_comb begin
       if (blur_up_valid_o) nxt_st = Blend;
     end
     Blend: begin
+      nxt_st = Writing;
     end
     Writing: begin
+      if (ready_o) nxt_st = Idle;
     end
     default: nxt_st = Idle;    // Should not happen.
   endcase
@@ -575,7 +577,7 @@ always_ff @(posedge clk) begin
     in_stable <= in_stable;
 end
 
-// TODO: Implement Gaussian pyramid pipeline based on blur.fil lines 308-368
+// Implement Gaussian pyramid pipeline based on blur.fil lines 308-368
 //
 // Pipeline structure:
 // 1. LEVEL 0 PATH (blur.fil lines 320-327):
@@ -601,41 +603,105 @@ Blur#(.D0(10), .D1(10)) blur0(
 
 // Store the image produced by the first level once valid is asserted
 // in the right state.
-logic[7:0][7:0][7:0] blur0_out_stable;
+logic[7:0][7:0][7:0] level0_stable;
 always_ff @(posedge clk) begin
-  if (st == Level0_Recv && blur0_valid_o)
-    blur0_out_stable <= blur0_out;
+  if (reset)
+    level0_stable <= '0;
+  else if (st == Level0_Recv && blur0_valid_o)
+    level0_stable <= blur0_out;
   else
-    blur0_out_stable <= blur0_out_stable;
+    level0_stable <= level0_stable;
 end
 
-//
 // 2. LEVEL 1 PATH (blur.fil lines 329-339):
 //    - Downsample level0 8x8 → 4x4 using Downsample module
 //    - Pad 4x4 → 6x6 using Pad module
 //    - Blur 6x6 → 4x4 using Blur module
 //    - Store level1 result
-//
-logic blur1_valid_i, blur1_valid_o, blur1_ready_i, blur1_ready_o;
 
-// TODO: Instantiate downsample, pad, and blur1
+logic[3:0][3:0][7:0] down_out;
+Downsample#(.W(8), .D0(8), .D1(8)) down1 (
+  .in(level0_stable), .out(down_out));
+
+logic[5:0][5:0][7:0] pad1_out;
+Pad#(.W(8), .D0(4), .D1(4)) pad1 (
+  .in(down_out), .out(pad1_out)
+);
+
+// TODO: The output from pad1 is combinationally tied to the
+// level0_stable.
+// Should we expect it to be stable during the execution of the module?
+logic blur1_valid_i, blur1_valid_o, blur1_ready_i, blur1_ready_o;
+logic[1:0] blur1_st;
+logic[3:0][3:0][7:0] blur1_out;
+Blur#(.D0(6), .D1(6)) blur1(
+  .clk, .reset, .state(blur1_st),
+  .in(pad1_out),   .valid_i(blur1_valid_i), .ready_i(blur1_ready_i),
+  .out(blur1_out), .valid_o(blur1_valid_o), .ready_o(blur1_ready_o)
+);
+
+logic[3:0][3:0][7:0] level1_out_stable;
+always_ff @(posedge clk) begin
+  if (reset)
+    level1_out_stable <= '0;
+  else if (st == Level1_Recv && blur1_valid_o)
+    level1_out_stable <= blur1_out;
+  else
+    level1_out_stable <= level1_out_stable;
+end
 
 // 3. UPSAMPLE PATH (blur.fil lines 341-351):
 //    - Upsample level1 4x4 → 8x8 using Upsample module
 //    - Pad 8x8 → 10x10 using Pad module
 //    - Blur 10x10 → 8x8 using Blur module
 //    - Result is upsampled level1
+
+logic[7:0][7:0][7:0] upsample_out;
+Upsample#(.W(8), .D0(4), .D1(4)) upsample(
+  .in(level1_out_stable), .out(upsample_out)
+);
+
+logic[9:0][9:0][7:0] pad_up_out;
+Pad#(.W(8), .D0(8), .D1(8)) pad_up(
+  .in(upsample_out), .out(pad_up_out)
+);
+
 logic blur_up_valid_i, blur_up_valid_o, blur_up_ready_i, blur_up_ready_o;
+logic[1:0] blur_up_st;
+logic[7:0][7:0][7:0] blur_up_out;
+Blur#(.D0(10), .D1(10)) blur_up(
+  .clk, .reset, .state(blur_up_st),
+  .in(pad_up_out),   .valid_i(blur_up_valid_i), .ready_i(blur_up_ready_i),
+  .out(blur_up_out), .valid_o(blur_up_valid_o), .ready_o(blur_up_ready_o)
+);
+logic[7:0][7:0][7:0] upsampled_stable;
+always_ff @(posedge clk) begin
+  if (reset)
+    upsampled_stable <= '0;
+  else if (st == Upsample_Recv && blur_up_valid_o)
+    upsampled_stable <= blur0_out;
+  else
+    upsampled_stable <= upsampled_stable;
+end
 
 
 // 4. BLENDING (blur.fil lines 353-360):
 //    - Blend level0 and upsampled level1 using Blend module
 //    - Formula: 0.75 * level0 + 0.25 * level1
 //    - Output final 8x8 result
-//
-// State machine needed to coordinate:
-// - Sequential processing through pipeline stages
-// - Proper ready/valid handshaking between modules
-// - Timing alignment for final blending step
+logic[7:0][7:0][7:0] blended_out;
+Blend#(.W(8), .D0(8), .D1(8)) blend(
+  .level0(level0_stable),
+  .level1(upsampled_stable),
+  .out(blended_out)
+);
+
+always_ff @(posedge clk) begin
+  if (reset) out <= '0;
+  else if (st == Blend) out <= blended_out;
+  else out <= out;
+end
+
+assign valid_o = st == Writing;
 
 endmodule
