@@ -10,7 +10,7 @@ def format_filament_design(design_path):
     match = re.search(r'fil-[^/]*/blur_(\d+)-out', design_path)
     if match:
         ii = match.group(1)
-        return f'Filament ({ii})'
+        return f'Lilac ({ii})'
     return design_path
 
 def format_rv_design(design_path):
@@ -79,9 +79,9 @@ def generate_latex_table(results_file, filament_latencies_file, rv_latencies_fil
     # Extract design names and sort by type and II value
     def sort_key(design):
         formatted = format_design_name(design)
-        if formatted.startswith('Filament'):
+        if formatted.startswith('Lilac'):
             # Extract II value for filament designs
-            match = re.search(r'Filament \((\d+)\)', formatted)
+            match = re.search(r'Lilac \((\d+)\)', formatted)
             ii = int(match.group(1)) if match else 0
             return (0, ii)  # Filament first, then by II
         elif formatted.startswith('RV'):
@@ -98,7 +98,7 @@ def generate_latex_table(results_file, filament_latencies_file, rv_latencies_fil
     lines = []
     lines.append(r'\begin{tabular}{lcccc}')
     lines.append(r'\toprule')
-    lines.append(r'\textbf{Design} & \textbf{LUTs} & \textbf{Registers} & Latency & \textbf{Freq. (MHz)} \\')
+    lines.append(r'\textbf{Design} & \textbf{LUTs} & \textbf{Registers} & \textbf{Latency} & \textbf{Freq. (MHz)} \\')
     lines.append(r'\midrule')
 
     # Add data rows
@@ -110,9 +110,9 @@ def generate_latex_table(results_file, filament_latencies_file, rv_latencies_fil
 
         # Get latency based on design type and II value
         latency = ""
-        if formatted_name.startswith('Filament'):
+        if formatted_name.startswith('Lilac'):
             # Extract II value for filament designs
-            match = re.search(r'Filament \((\d+)\)', formatted_name)
+            match = re.search(r'Lilac \((\d+)\)', formatted_name)
             if match:
                 ii = int(match.group(1))
                 latency = filament_latencies.get(ii, "N/A")
