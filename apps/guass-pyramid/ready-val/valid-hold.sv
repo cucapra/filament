@@ -71,137 +71,6 @@ assign out = val;
 
 endmodule
 
-module Conv2D#(
-  parameter N = 16
-) (
-  input logic clk,
-  input logic reset,
-
-  // Input interface
-  input logic valid_i,
-  output logic ready_i,
-  input logic[15:0][7:0] i,
-
-  // Output interface
-  output logic valid_o,
-  input logic ready_o,
-  output logic[15:0][7:0] o
-);
-
-// Interface with the convolution module
-logic conv_valid_i, conv_valid_o;
-logic[N-1:0][7:0] conv_out;
-logic[N-1:0][7:0] conv_in;
-AetherlingConv#(.N(N)) Conv(
-  .clk, .reset,
-  .in(conv_in),
-  .valid_i(conv_valid_i),
-  .valid_o(conv_valid_o),
-  .out(conv_out)
-);
-
-// States
-localparam IDLE=0, PROC_SEND=1, PROC_RECV=2, WRITING=3;
-
-// Store the inputs till the computation is done.
-logic[15:0][7:0] in, out;
-
-always_ff @(posedge clk) begin
-  if (reset) in <= '0;
-  else if (st == IDLE && valid_i & ready_i) in <= i;
-  else in <= in;
-end
-
-// The chunk we are working on.
-localparam Chunks = 16 / N;
-localparam Chunks_1 = Chunks - 1;
-logic[3:0] idx, nxt_idx;
-always_ff @(posedge clk) begin
-  if (reset) idx <= '0;
-  else idx <= nxt_idx;
-end
-
-wire last_chunk = idx == Chunks_1[3:0];
-
-// State machine
-logic[1:0] st, nxt_st;
-always_comb begin
-  nxt_st = st;
-  nxt_idx = idx;
-  conv_valid_i = 0;
-
-  case (st)
-    IDLE: begin
-      if (valid_i) nxt_st = PROC_SEND;
-    end
-    PROC_SEND: begin
-      nxt_st = PROC_RECV;
-      conv_valid_i = 1;
-    end
-    PROC_RECV: begin
-      // If the convolution module has returned a valid value.
-      if (conv_valid_o) begin
-        // This is the last chunk. Finish processing.
-        if (last_chunk) begin
-          nxt_idx = '0;
-          nxt_st = WRITING;
-        end else begin
-          nxt_idx = idx + 1;
-          nxt_st = PROC_SEND;
-        end
-      end
-    end
-    WRITING: begin
-      if (ready_o) nxt_st = IDLE;
-    end
-  endcase
-end
-always_ff @(posedge clk) begin
-  if (reset) st <= IDLE;
-  else st <= nxt_st;
-end
-
-// The input to convolution module.
-always_comb begin
-  conv_in = '0;
-  for (int j = 0; j < Chunks; j++) begin
-    if (idx == j[3:0]) begin
-      conv_in = in[N*j+:N];
-    end
-  end
-end
-
-// Collect output from the convolution module.
-always_comb begin
-  out = o;
-  for (int j = 0; j < Chunks; j++) begin
-    // If the output is valid;
-    if (conv_valid_o && idx == j[3:0]) begin
-      // $display("writing to chunk %0d: [%0d:%0d]", j[3:0], N*j+N, N*j);
-      out[N*j+:N] = conv_out;
-    end
-  end
-end
-always_ff @(posedge clk) begin
-  o <= out;
-  /*
-  if (conv_valid_o) begin
-    $write("out: ");
-    for (int i = 0; i < 16; i++)
-      $write("%0d,", out[i]);
-    $write("; conv_out: ");
-    for (int i = 0; i < N; i++)
-      $write("%0d,", conv_out[i]);
-    $display("");
-  end
-  */
-end
-
-assign valid_o = st == WRITING;
-assign ready_i = st == IDLE;
-
-endmodule
-
 // Pad the input image by a row and a column;
 module Pad#(
   parameter D0 = 8,
@@ -269,6 +138,136 @@ end
 
 endmodule
 
+module Conv2D#(
+  parameter N = 16
+) (
+  input logic clk,
+  input logic reset,
+
+  // Input interface
+  input logic valid_i,
+  output logic ready_i,
+  input logic[15:0][7:0] i,
+
+  // Output interface
+  output logic valid_o,
+  input logic ready_o,
+  output logic[15:0][7:0] o
+);
+
+// Interface with the convolution module
+logic conv_valid_i, conv_valid_o;
+logic[N-1:0][7:0] conv_out;
+logic[N-1:0][7:0] conv_in;
+AetherlingConv#(.N(N)) Conv(
+  .clk,
+  .I(conv_in),
+  .valid_i(conv_valid_i),
+  .valid_o(conv_valid_o),
+  .O(conv_out)
+);
+
+
+// Store the inputs and outputs till txns occur.
+logic[15:0][7:0] in, out;
+
+always_ff @(posedge clk) begin
+  if (reset) in <= '0;
+  else if (valid_i & ready_i) in <= i;
+  else in <= in;
+end
+
+// The chunk we are working on.
+localparam Chunks = 16 / N;
+localparam Chunks_1 = Chunks - 1;
+
+// Uses two state machines to interface with the input and output sides of the
+// aetherling conv module.
+
+// The send interface will send new inputs to the convolution implementation
+// and wait till all the outputs have been read off.
+localparam S_IDLE=0, S_PROC=1, S_BLOCKED=2;
+logic[1:0] send_st, send_nxt;
+wire last_send = send_idx == Chunks_1[3:0];
+
+always_ff @(posedge clk) begin
+  if (reset) send_st <= S_IDLE;
+  else send_st <= send_nxt;
+end
+
+always_comb begin
+  send_nxt = send_st;
+  case (send_st)
+    S_IDLE: if (valid_i) send_nxt = S_PROC;
+    S_PROC: if (last_send) send_nxt = S_BLOCKED;
+    S_BLOCKED: if (valid_o & ready_o) send_nxt = S_IDLE;
+  endcase
+end
+
+assign conv_valid_i = send_st == S_PROC;
+
+// The input to convolution module.
+logic[3:0] send_idx;
+always_ff @(posedge clk) begin
+  // This assume that we can send new inputs to the module every cycle.
+  if (send_st == S_PROC & ~last_send) send_idx <= send_idx + 1;
+  else send_idx <= 0;
+end
+always_comb begin
+  conv_in = '0;
+  for (int j = 0; j < Chunks; j++) begin
+    if (send_idx == j[3:0]) begin
+      conv_in = in[N*j+:N];
+    end
+  end
+end
+
+
+// The recieve side will wait on the output from the conv module and be
+// blocked till the consumer downstream accepts the output.
+localparam R_IDLE=0, R_WAIT=1, R_BLOCKED=2;
+logic[1:0] recv_st, recv_nxt;
+wire last_recv = recv_idx == Chunks_1[3:0];
+
+always_ff @(posedge clk) begin
+  if (reset) recv_st <= S_IDLE;
+  else recv_st <= recv_nxt;
+end
+
+always_comb begin
+  recv_nxt = recv_st;
+  case (recv_st)
+    R_IDLE: if (valid_i) recv_nxt = R_WAIT;
+    R_WAIT: if (last_recv) recv_nxt = R_BLOCKED;
+    R_BLOCKED: if (ready_o) recv_nxt = R_IDLE;
+  endcase
+end
+
+// Collect output from the convolution module.
+logic[3:0] recv_idx;
+always_ff @(posedge clk) begin
+  if (recv_st == R_WAIT & conv_valid_o) recv_idx <= recv_idx + 1;
+  else recv_idx <= 0;
+end
+always_comb begin
+  out = o;
+  for (int j = 0; j < Chunks; j++) begin
+    // If the output is valid;
+    if (conv_valid_o && recv_idx == j[3:0]) begin
+      // $display("writing to chunk %0d: [%0d:%0d]", j[3:0], N*j+N, N*j);
+      out[N*j+:N] = conv_out;
+    end
+  end
+end
+always_ff @(posedge clk) begin
+  o <= out;
+end
+
+assign valid_o = recv_st == R_BLOCKED;
+assign ready_i = send_st == S_IDLE;
+
+endmodule
+
 // Gaussian blur convolution module
 // Applies a blur kernel to reduce noise and create pyramid levels
 // Should implement a 3x3 or 5x5 Gaussian kernel convolution
@@ -288,7 +287,9 @@ module Blur#(
 
   output logic valid_o,
   input logic ready_o,
-  output logic[D0-3:0][D1-3:0][7:0] out  // Convolution reduces size by kernel-2
+  output logic[D0-3:0][D1-3:0][7:0] out,  // Convolution reduces size by kernel-2
+
+  input int cycles
 );
 // TODO: Implement Gaussian blur convolution with proper state machine
 // Should apply blur kernel to each pixel neighborhood and manage ready/valid protocol
@@ -315,17 +316,36 @@ always_ff @(posedge clk) begin
   else st <= nxt_st;
 end
 
+// We are going to send an input to the module immediately.
+wire early_send = ~last_chunk & conv_valid_o & conv_ready_i;
+
 always_comb begin
   nxt_st = st;
+  conv_valid_i = 0;
   case (st)
     Idle: begin  // If there is a new input, we start processing it.
       if (valid_i) nxt_st = Send_Conv;
     end
-    Send_Conv: if (conv_ready_i) nxt_st = Recv_Conv;
+    Send_Conv: begin
+      conv_valid_i = 1;
+      if (conv_ready_i) begin
+        $display("Conv started: %0d", cycles);
+        nxt_st = Recv_Conv;
+      end
+    end
     Recv_Conv: begin
       if (conv_valid_o) begin
+        $display("Conv completed: %0d", cycles);
         if (last_chunk) nxt_st = Writing;
-        else nxt_st = Send_Conv;
+        else if (conv_ready_i) begin
+          // If the convolution modules is already ready to process a
+          // new input, we will attempt to send one.
+          $display("Overlapping conv started: %0d", cycles);
+          conv_valid_i = 1;
+          nxt_st = Recv_Conv;
+        end else begin
+          nxt_st = Send_Conv;
+        end
       end
     end
     Writing: if (ready_o) nxt_st = Idle;
@@ -393,16 +413,15 @@ end
 
 // Set up the input for the convolution
 always_comb begin
-  if (st == Send_Conv) conv_valid_i = 1;
-  else conv_valid_i = 0;
-end
-always_comb begin
   conv_in = '0;
   // Extract 4x4 window starting at (2*tile_i, 2*tile_j)
   // Flatten to 16 elements for Conv2D
   for (int r = 0; r < 4; r++) begin
     for (int c = 0; c < 4; c++) begin
-      conv_in[r*4 + c] = image[2*tile_i + r][2*tile_j + c];
+      if (early_send)
+        conv_in[r*4 + c] = image[2*nxt_tile_i + r][2*nxt_tile_j + c];
+      else
+        conv_in[r*4 + c] = image[2*tile_i + r][2*tile_j + c];
     end
   end
 end
@@ -476,7 +495,7 @@ end
 
 endmodule
 
-module Pyramid #(
+module main #(
   parameter Blur0_N = 16,
   parameter Blur1_N = 16,
   parameter BlurUp_N = 16
@@ -493,6 +512,9 @@ module Pyramid #(
   output logic[7:0][7:0][7:0] out,  // 8x8 output image
 
   /// Debug signals
+  `ifndef SYNTHESIS
+  input int cycles,
+  `endif
   // Blur states
   output logic[3:0] st,
   output logic[1:0] blur0_st,
@@ -531,33 +553,68 @@ always_comb begin
     end
     Level0_Send: begin
       blur0_valid_i = 1;
-      if (blur0_ready_i) nxt_st = Level0_Recv;
+      if (blur0_ready_i) begin
+        `ifndef SYNTHESIS
+        $display("===== Blur0 started at %0d", cycles);
+        `endif
+        nxt_st = Level0_Recv;
+      end
     end
     Level0_Recv: begin
       blur0_ready_o = 1;
-      if (blur0_valid_o) nxt_st = Level1_Send;
+      if (blur0_valid_o) begin
+        `ifndef SYNTHESIS
+        $display("===== Blur0 completed at %0d", cycles);
+        `endif
+        nxt_st = Level1_Send;
+      end
     end
     Level1_Send: begin
       blur1_valid_i = 1;
-      if (blur1_ready_i) nxt_st = Level1_Recv;
+      if (blur1_ready_i) begin
+        `ifndef SYNTHESIS
+        $display("===== Blur1 started at %0d", cycles);
+        `endif
+        nxt_st = Level1_Recv;
+      end
     end
     Level1_Recv: begin
       blur1_ready_o = 1;
-      if (blur1_valid_o) nxt_st = Upsample_Send;
+      if (blur1_valid_o) begin
+        `ifndef SYNTHESIS
+        $display("===== Blur1 completed at %0d", cycles);
+        `endif
+        nxt_st = Upsample_Send;
+      end
     end
     Upsample_Send: begin
       blur_up_valid_i = 1;
-      if (blur_up_ready_i) nxt_st = Upsample_Recv;
+      if (blur_up_ready_i) begin
+        `ifndef SYNTHESIS
+        $display("===== BlurUp started at %0d", cycles);
+        `endif
+        nxt_st = Upsample_Recv;
+      end
     end
     Upsample_Recv: begin
       blur_up_ready_o = 1;
-      if (blur_up_valid_o) nxt_st = Blend;
+      if (blur_up_valid_o) begin
+        `ifndef SYNTHESIS
+        $display("===== BlurUp completed at %0d", cycles);
+        `endif
+        nxt_st = Blend;
+      end
     end
     Blend: begin
       nxt_st = Writing;
     end
     Writing: begin
-      if (ready_o) nxt_st = Idle;
+      if (ready_o) begin
+        `ifndef SYNTHESIS
+        $display("Computation completed at %0d", cycles);
+        `endif
+        nxt_st = Idle;
+      end
     end
     default: nxt_st = Idle;    // Should not happen.
   endcase
@@ -595,7 +652,8 @@ logic[7:0][7:0][7:0] blur0_out;
 Blur#(.N(Blur0_N), .D0(10), .D1(10)) blur0(
   .clk, .reset, .state(blur0_st),
   .in(pad0_out),   .valid_i(blur0_valid_i), .ready_i(blur0_ready_i),
-  .out(blur0_out), .valid_o(blur0_valid_o), .ready_o(blur0_ready_o)
+  .out(blur0_out), .valid_o(blur0_valid_o), .ready_o(blur0_ready_o),
+  .cycles
 );
 
 
@@ -633,7 +691,8 @@ logic[3:0][3:0][7:0] blur1_out;
 Blur#(.N(Blur1_N), .D0(6), .D1(6)) blur1(
   .clk, .reset, .state(blur1_st),
   .in(pad1_out),   .valid_i(blur1_valid_i), .ready_i(blur1_ready_i),
-  .out(blur1_out), .valid_o(blur1_valid_o), .ready_o(blur1_ready_o)
+  .out(blur1_out), .valid_o(blur1_valid_o), .ready_o(blur1_ready_o),
+  .cycles
 );
 
 always_ff @(posedge clk) begin
@@ -666,7 +725,8 @@ logic[7:0][7:0][7:0] blur_up_out;
 Blur#(.N(BlurUp_N), .D0(10), .D1(10)) blur_up(
   .clk, .reset, .state(blur_up_st),
   .in(pad_up_out),   .valid_i(blur_up_valid_i), .ready_i(blur_up_ready_i),
-  .out(blur_up_out), .valid_o(blur_up_valid_o), .ready_o(blur_up_ready_o)
+  .out(blur_up_out), .valid_o(blur_up_valid_o), .ready_o(blur_up_ready_o),
+  .cycles
 );
 always_ff @(posedge clk) begin
   if (reset)

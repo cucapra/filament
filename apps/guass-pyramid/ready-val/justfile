@@ -1,8 +1,8 @@
 # Justfile for Conv2D testbench
 
 # Common Verilator flags
-VFLAGS := "--binary --timing"
-VFLAGS_TRACE := "--binary --timing --trace"
+VFLAGS := "--binary --timing --quiet"
+VFLAGS_TRACE := "--binary --timing --trace --quiet"
 VFLAGS_LINT := "-Wall --lint-only"
 SOURCES := "conv2d_tb.sv valid-hold.sv"
 
@@ -31,16 +31,29 @@ run-trace: build-trace
 
 # Clean build artifacts
 clean:
-    rm -rf obj_dir *.vcd tests/*_n*.sv tests/*_d*_n*.sv
+    rm -rf obj_dir *.vcd tests/*_n*.sv tests/*_d*_n*.sv pyramid_impl_n*.sv
+
+# Test AetherlingConv directly with different N values
+test-aetherling N:
+    @echo "Testing AetherlingConv with N={{N}}"
+    @if [ ! -f conv/{{N}}.sv ]; then echo "Error: conv/{{N}}.sv not found"; exit 1; fi
+    sed 's/parameter N = 4;/parameter N = {{N}};/' tests/aetherling_tb.sv > tests/aetherling_tb_n{{N}}.sv
+    verilator {{VFLAGS_TRACE}} -o sim_aetherling_n{{N}} tests/aetherling_tb_n{{N}}.sv conv/{{N}}.sv
+    ./obj_dir/sim_aetherling_n{{N}}
+    @[ -f aetherling_tb.vcd ] && mv aetherling_tb.vcd aetherling_tb_n{{N}}.vcd || true
+    rm tests/aetherling_tb_n{{N}}.sv
 
 # Test with different N values (with VCD tracing)
 # Test a specific N value with custom name
 test-n N:
+    @echo "Testing Conv2D with N={{N}}"
+    # @if [ ! -f conv/{{N}}.sv ]; then echo "Error: conv/{{N}}.sv not found"; exit 1; fi
     sed 's/parameter N = 4;/parameter N = {{N}};/' tests/conv2d_tb.sv > tests/conv2d_tb_n{{N}}.sv
-    verilator {{VFLAGS_TRACE}} -o sim_n{{N}} tests/conv2d_tb_n{{N}}.sv valid-hold.sv
+    cat pyramid-dummy.sv > tests/conv2d_impl_n{{N}}.sv
+    verilator {{VFLAGS_TRACE}} -o sim_n{{N}} tests/conv2d_tb_n{{N}}.sv tests/conv2d_impl_n{{N}}.sv
     ./obj_dir/sim_n{{N}}
     @[ -f conv2d_tb.vcd ] && mv conv2d_tb.vcd conv2d_tb_n{{N}}.vcd || true
-    rm tests/conv2d_tb_n{{N}}.sv
+    rm tests/conv2d_tb_n{{N}}.sv tests/conv2d_impl_n{{N}}.sv
 
 # Test Blur module with specific D and N values
 test-blur D N:
@@ -48,7 +61,7 @@ test-blur D N:
     @if [ {{D}} -lt 4 ]; then echo "Error: D must be >= 4"; exit 1; fi
     sed 's/parameter D = 8;/parameter D = {{D}};/' tests/blur_tb.sv > tests/blur_tb_d{{D}}_n{{N}}.sv
     sed -i '' 's/parameter N = 4;/parameter N = {{N}};/' tests/blur_tb_d{{D}}_n{{N}}.sv
-    verilator {{VFLAGS_TRACE}} -o sim_blur_d{{D}}_n{{N}} tests/blur_tb_d{{D}}_n{{N}}.sv valid-hold.sv
+    verilator {{VFLAGS_TRACE}} -o sim_blur_d{{D}}_n{{N}} tests/blur_tb_d{{D}}_n{{N}}.sv pyramid-dummy.sv
     ./obj_dir/sim_blur_d{{D}}_n{{N}}
     @[ -f blur_tb.vcd ] && mv blur_tb.vcd blur_tb_d{{D}}_n{{N}}.vcd || true
     rm tests/blur_tb_d{{D}}_n{{N}}.sv
@@ -56,19 +69,29 @@ test-blur D N:
 # Quick blur test with default parameters
 test-blur-default: (test-blur "8" "4")
 
-# Test Pyramid module with specific N values for each blur stage
-test-pyramid blur0_n blur1_n blur_up_n:
-    @echo "Testing Pyramid with Blur0_N={{blur0_n}}, Blur1_N={{blur1_n}}, BlurUp_N={{blur_up_n}}"
-    sed 's/parameter Blur0_N = 16;/parameter Blur0_N = {{blur0_n}};/' tests/pyramid_tb.sv > tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv
-    sed -i '' 's/parameter Blur1_N = 16;/parameter Blur1_N = {{blur1_n}};/' tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv
-    sed -i '' 's/parameter BlurUp_N = 16;/parameter BlurUp_N = {{blur_up_n}};/' tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv
-    verilator {{VFLAGS_TRACE}} -o sim_pyramid_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}} tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv valid-hold.sv
-    ./obj_dir/sim_pyramid_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}
-    @[ -f pyramid_tb.vcd ] && mv pyramid_tb.vcd pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.vcd || true
-    rm tests/pyramid_tb_{{blur0_n}}_{{blur1_n}}_{{blur_up_n}}.sv
+# Test Pyramid module with three N parameters (using gen-pyramid-tb.sh script)
+test-pyramid Blur0_N Blur1_N BlurUp_N:
+    @echo "Testing Pyramid with Blur0_N={{Blur0_N}}, Blur1_N={{Blur1_N}}, BlurUp_N={{BlurUp_N}}"
+    ./gen-pyramid-tb.sh {{Blur0_N}} {{Blur1_N}} {{BlurUp_N}} testbench > tests/pyramid_tb_n{{Blur0_N}}.sv
+    ./gen-pyramid-tb.sh {{Blur0_N}} {{Blur1_N}} {{BlurUp_N}} implementation > pyramid_impl_n{{Blur0_N}}.sv
+    verilator {{VFLAGS_TRACE}} -o sim_pyramid_n{{Blur0_N}} tests/pyramid_tb_n{{Blur0_N}}.sv pyramid_impl_n{{Blur0_N}}.sv
+    ./obj_dir/sim_pyramid_n{{Blur0_N}}
+    @[ -f pyramid_tb.vcd ] && mv pyramid_tb.vcd pyramid_tb_n{{Blur0_N}}.vcd || true
+    rm tests/pyramid_tb_n{{Blur0_N}}.sv pyramid_impl_n{{Blur0_N}}.sv
 
-# Quick pyramid test with default parameters
+# Test pyramid testbench only (without implementation generation)
+test-pyramid-tb Blur0_N Blur1_N BlurUp_N:
+    @echo "Testing Pyramid testbench with Blur0_N={{Blur0_N}}, Blur1_N={{Blur1_N}}, BlurUp_N={{BlurUp_N}}"
+    ./gen-pyramid-tb.sh {{Blur0_N}} {{Blur1_N}} {{BlurUp_N}} testbench > tests/pyramid_tb_n{{Blur0_N}}.sv
+    verilator {{VFLAGS_TRACE}} -o sim_pyramid_tb_n{{Blur0_N}} tests/pyramid_tb_n{{Blur0_N}}.sv valid-hold.sv
+    ./obj_dir/sim_pyramid_tb_n{{Blur0_N}}
+    @[ -f pyramid_tb.vcd ] && mv pyramid_tb.vcd pyramid_tb_n{{Blur0_N}}.vcd || true
+    rm tests/pyramid_tb_n{{Blur0_N}}.sv
+
+# Generate implementation file only (no testing)
+gen-pyramid-impl Blur0_N Blur1_N BlurUp_N:
+    ./gen-pyramid-tb.sh {{Blur0_N}} {{Blur1_N}} {{BlurUp_N}} implementation
+
+# Quick pyramid tests
 test-pyramid-default: (test-pyramid "16" "16" "16")
-
-# Test pyramid with small N values for faster simulation
 test-pyramid-fast: (test-pyramid "4" "4" "4")

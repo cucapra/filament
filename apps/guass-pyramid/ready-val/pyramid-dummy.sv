@@ -86,25 +86,220 @@ module AetherlingConv#(
   output logic[N-1:0][7:0] out,
   output logic valid_o
 );
+logic [5:0][N-1:0][7:0] pipeline;
+logic [5:0] val;
+
 generate
-// Increment by two
-for (genvar i = 0; i < N; i++) begin : Loop
+for (genvar i = 0; i < 5; i++) begin : Shift
   always_ff @(posedge clk) begin
-    if (reset) out[i] <= '0;
-    else out[i] <= in[i] + 2;
+    pipeline[i+1] <= pipeline[i];
+    val[i+1] <= val[i];
   end
 end
 
+// Increment by two
+for (genvar i = 0; i < N; i++) begin : Loop
+  always_ff @(posedge clk) begin
+    pipeline[0][i] <= in[i] + 2;
+  end
+end
+endgenerate
+
 always_ff @(posedge clk) begin
-  if (reset) valid_o <= '0;
-  else valid_o <= valid_i;
+  val[0] <= valid_i;
 end
 
-endgenerate
+assign out = pipeline[5];
+assign valid_o = val[5];
 
 endmodule
 /* verilator lint_on UNUSED */
 /* verilator lint_on UNDRIVEN */
+
+/*
+module AetherlingConvAdapt #(parameter N = 16) (
+  input logic clk,
+
+  input logic valid_i,
+  output logic ready_i,
+  input logic[N-1:0][7:0] in,
+
+  input logic valid_o,
+  output logic ready_o,
+  input logic[N-1:0][7:0] out
+);
+
+// Only allow the known bindings
+generate
+  if (N != 1 & N != 2 & N != 4 & N != 8 & N != 16 & N != 48 & N != 144)
+    $error("Incorrect binding for conv 16: %0d", N);
+endgenerate
+
+localparam LATENCY =
+  N == 1 ? 7 :
+  N == 48 ? 12 :
+  N == 144 ? 21 :
+  6;  // N = 4, 8, 16
+
+logic [$clog2(N):0] val, val_nxt;
+always_ff @(posedge clk) begin
+  if (reset) valid <= 0;
+  else val <= { val_nxt[$clog2(N):1], 0 };
+end
+always_comb begin
+  val_nxt = val;
+  if (val_i) val_nxt[0] = 1;
+end
+
+localparam II =
+  N == 144 ? 9 :
+  N == 48 ? 3  :
+  1;
+// TODO;
+
+
+// The signaling logic within Aetherling is broken so we generate our
+// own signals.
+AetherlingConv#(.N(N)) Conv(
+  .clk, .reset,
+  .in(conv_in),
+  .valid_i(conv_valid_i),
+  .valid_o(),
+  .out(conv_out)
+);
+
+endmodule
+*/
+
+module FastConv2D#(
+  parameter N = 16
+) (
+  input logic clk,
+  input logic reset,
+
+  // Input interface
+  input logic valid_i,
+  output logic ready_i,
+  input logic[15:0][7:0] i,
+
+  // Output interface
+  output logic valid_o,
+  input logic ready_o,
+  output logic[15:0][7:0] o
+);
+
+// Store the inputs and outputs till txns occur.
+logic[15:0][7:0] in, out;
+
+always_ff @(posedge clk) begin
+  if (reset) in <= '0;
+  else if (valid_i & ready_i) in <= i;
+  else in <= in;
+end
+
+// Interface with the convolution module
+logic conv_valid_i, conv_valid_o;
+logic[N-1:0][7:0] conv_out;
+logic[N-1:0][7:0] conv_in;
+AetherlingConv#(.N(N)) Conv(
+  .clk, .reset,
+  .in(conv_in),
+  .valid_i(conv_valid_i),
+  .valid_o(conv_valid_o),
+  .out(conv_out)
+);
+
+
+// The chunk we are working on.
+localparam Chunks = 16 / N;
+localparam Chunks_1 = Chunks - 1;
+
+// Uses two state machines to interface with the input and output sides of the
+// aetherling conv module.
+
+// The send interface will send new inputs to the convolution implementation
+// and wait till all the outputs have been read off.
+localparam S_IDLE=0, S_PROC=1, S_BLOCKED=2;
+logic[1:0] send_st, send_nxt;
+wire last_send = send_idx == Chunks_1[3:0];
+
+always_ff @(posedge clk) begin
+  if (reset) send_st <= S_IDLE;
+  else send_st <= send_nxt;
+end
+
+always_comb begin
+  send_nxt = send_st;
+  case (send_st)
+    S_IDLE: if (valid_i) send_nxt = S_PROC;
+    S_PROC: if (last_send) send_nxt = S_BLOCKED;
+    S_BLOCKED: if (valid_o & ready_o) send_nxt = S_IDLE;
+  endcase
+end
+
+assign conv_valid_i = send_st == S_PROC;
+
+// The input to convolution module.
+logic[3:0] send_idx;
+always_ff @(posedge clk) begin
+  // This assume that we can send new inputs to the module every cycle.
+  if (send_st == S_PROC & ~last_send) send_idx <= send_idx + 1;
+  else send_idx <= 0;
+end
+always_comb begin
+  conv_in = '0;
+  for (int j = 0; j < Chunks; j++) begin
+    if (send_idx == j[3:0]) begin
+      conv_in = in[N*j+:N];
+    end
+  end
+end
+
+
+// The recieve side will wait on the output from the conv module and be
+// blocked till the consumer downstream accepts the output.
+localparam R_IDLE=0, R_WAIT=1, R_BLOCKED=2;
+logic[1:0] recv_st, recv_nxt;
+wire last_recv = recv_idx == Chunks_1[3:0];
+
+always_ff @(posedge clk) begin
+  if (reset) recv_st <= S_IDLE;
+  else recv_st <= recv_nxt;
+end
+
+always_comb begin
+  recv_nxt = recv_st;
+  case (recv_st)
+    R_IDLE: if (valid_i) recv_nxt = R_WAIT;
+    R_WAIT: if (last_recv) recv_nxt = R_BLOCKED;
+    R_BLOCKED: if (ready_o) recv_nxt = R_IDLE;
+  endcase
+end
+
+// Collect output from the convolution module.
+logic[3:0] recv_idx;
+always_ff @(posedge clk) begin
+  if (recv_st == R_WAIT & conv_valid_o) recv_idx <= recv_idx + 1;
+  else recv_idx <= 0;
+end
+always_comb begin
+  out = o;
+  for (int j = 0; j < Chunks; j++) begin
+    // If the output is valid;
+    if (conv_valid_o && recv_idx == j[3:0]) begin
+      // $display("writing to chunk %0d: [%0d:%0d]", j[3:0], N*j+N, N*j);
+      out[N*j+:N] = conv_out;
+    end
+  end
+end
+always_ff @(posedge clk) begin
+  o <= out;
+end
+
+assign valid_o = recv_st == R_BLOCKED;
+assign ready_i = send_st == S_IDLE;
+
+endmodule
 
 module Conv2D#(
   parameter N = 16
@@ -143,7 +338,7 @@ logic[15:0][7:0] in, out;
 
 always_ff @(posedge clk) begin
   if (reset) in <= '0;
-  else if (st == IDLE && valid_i & ready_i) in <= i;
+  else if (valid_i & ready_i) in <= i;
   else in <= in;
 end
 
@@ -157,6 +352,15 @@ always_ff @(posedge clk) begin
 end
 
 wire last_chunk = idx == Chunks_1[3:0];
+
+logic[2:0] counter;
+always_ff @(posedge clk) begin
+  if (counter == LATENCY-1) counter <= 0;
+  else if (st == PROC_SEND || st == PROC_RECV) counter <= counter + 1;
+  else counter <= 0;
+end
+
+localparam LATENCY = N == 1 ? 7 : 6;
 
 // State machine
 logic[1:0] st, nxt_st;
@@ -175,19 +379,26 @@ always_comb begin
     end
     PROC_RECV: begin
       // If the convolution module has returned a valid value.
-      if (conv_valid_o) begin
+      if (counter >= LATENCY-1) begin
         // This is the last chunk. Finish processing.
         if (last_chunk) begin
           nxt_idx = '0;
           nxt_st = WRITING;
         end else begin
+          // We know this suceeds because conv is fully pipelined
+          conv_valid_i = 1;
           nxt_idx = idx + 1;
-          nxt_st = PROC_SEND;
+          nxt_st = PROC_RECV;
         end
       end
     end
     WRITING: begin
-      if (ready_o) nxt_st = IDLE;
+      if (ready_o) begin
+        // if the upstream computation is sending new input, then we can
+        // start processing immediately.
+        if (valid_i) nxt_st = PROC_SEND;
+        else nxt_st = IDLE;
+      end
     end
   endcase
 end
@@ -200,8 +411,15 @@ end
 always_comb begin
   conv_in = '0;
   for (int j = 0; j < Chunks; j++) begin
-    if (idx == j[3:0]) begin
-      conv_in = in[N*j+:N];
+    if (st == PROC_RECV) begin
+      if (nxt_idx == j[3:0]) begin
+        conv_in = in[N*j+:N];
+      end
+    end
+    if (st == PROC_SEND) begin
+      if (idx == j[3:0]) begin
+        conv_in = in[N*j+:N];
+      end
     end
   end
 end
@@ -233,7 +451,9 @@ always_ff @(posedge clk) begin
 end
 
 assign valid_o = st == WRITING;
-assign ready_i = st == IDLE;
+// We can accept new inputs in the writing stage too if the consumer is
+// ready to accept the output.
+assign ready_i = st == IDLE | (st == WRITING & ready_o);
 
 endmodule
 
@@ -350,17 +570,31 @@ always_ff @(posedge clk) begin
   else st <= nxt_st;
 end
 
+// We are going to send an input to the module immediately.
+wire early_send = ~last_chunk & conv_valid_o & conv_ready_i;
+
 always_comb begin
   nxt_st = st;
+  conv_valid_i = 0;
   case (st)
     Idle: begin  // If there is a new input, we start processing it.
       if (valid_i) nxt_st = Send_Conv;
     end
-    Send_Conv: if (conv_ready_i) nxt_st = Recv_Conv;
+    Send_Conv: begin
+      conv_valid_i = 1;
+      if (conv_ready_i) nxt_st = Recv_Conv;
+    end
     Recv_Conv: begin
       if (conv_valid_o) begin
         if (last_chunk) nxt_st = Writing;
-        else nxt_st = Send_Conv;
+        else if (conv_ready_i) begin
+          // If the convolution modules is already ready to process a
+          // new input, we will attempt to send one.
+          conv_valid_i = 1;
+          nxt_st = Recv_Conv;
+        end else begin
+          nxt_st = Send_Conv;
+        end
       end
     end
     Writing: if (ready_o) nxt_st = Idle;
@@ -428,16 +662,15 @@ end
 
 // Set up the input for the convolution
 always_comb begin
-  if (st == Send_Conv) conv_valid_i = 1;
-  else conv_valid_i = 0;
-end
-always_comb begin
   conv_in = '0;
   // Extract 4x4 window starting at (2*tile_i, 2*tile_j)
   // Flatten to 16 elements for Conv2D
   for (int r = 0; r < 4; r++) begin
     for (int c = 0; c < 4; c++) begin
-      conv_in[r*4 + c] = image[2*tile_i + r][2*tile_j + c];
+      if (early_send)
+        conv_in[r*4 + c] = image[2*nxt_tile_i + r][2*nxt_tile_j + c];
+      else
+        conv_in[r*4 + c] = image[2*tile_i + r][2*tile_j + c];
     end
   end
 end

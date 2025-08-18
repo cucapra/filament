@@ -50,13 +50,13 @@ always_ff @(posedge clk) begin
   if (reset) cycles <= '0;
   else cycles <= cycles + 1;
 
-  if (cycles > 50) begin
-    $display("timeout at 100 cycles!");
+  if (cycles > 5000) begin
+    $display("TIMEOUT: Test exceeded 5000 cycles!");
     $finish;
   end
 
-  if (valid_i) start_v <= cycles;
-  if (valid_o) end_v <= cycles;
+  if (valid_i && ready_i) start_v <= cycles;
+  if (valid_o && ready_o) end_v <= cycles;
 end
 
 // Test stimulus
@@ -141,7 +141,14 @@ initial begin
   // Wait a few cycles then end
   repeat(10) @(posedge clk);
 
-  $display("\nTest completed! Latency: %0d, Cycles: %0d", end_v-start_v, cycles);
+  $display("\n=== CONV2D LATENCY RESULTS ===");
+  $display("Parameter N: %0d", N);
+  $display("Transaction start cycle: %0d", start_v);
+  $display("Transaction end cycle: %0d", end_v);
+  $display("Total latency: %0d cycles", end_v - start_v);
+  $display("Chunks processed: %0d", 16/N);
+  $display("Cycles per chunk: %.1f", real'(end_v - start_v) / real'(16/N));
+  $display("Total simulation cycles: %0d", cycles);
   $finish;
 end
 

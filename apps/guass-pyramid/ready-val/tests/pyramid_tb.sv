@@ -10,7 +10,7 @@ module pyramid_tb;
   logic clk, reset;
   logic valid_i, ready_i, valid_o, ready_o;
   logic[7:0][7:0][7:0] in, out;
-  
+
   // Debug signals
   logic[3:0] st;
   logic[1:0] blur0_st, blur1_st, blur_up_st;
@@ -18,8 +18,11 @@ module pyramid_tb;
   logic[3:0][3:0][7:0] level1_stable;
   logic[7:0][7:0][7:0] upsampled_stable;
 
+  // Simulation control and monitoring
+  int cycle_count = 0;
+
   // Instantiate the Pyramid module
-  Pyramid #(
+  main #(
     .Blur0_N(Blur0_N),
     .Blur1_N(Blur1_N),
     .BlurUp_N(BlurUp_N)
@@ -32,6 +35,8 @@ module pyramid_tb;
     .valid_o(valid_o),
     .ready_o(ready_o),
     .out(out),
+    // Debug signals
+    .cycles(cycle_count),
     .st(st),
     .blur0_st(blur0_st),
     .blur1_st(blur1_st),
@@ -44,26 +49,23 @@ module pyramid_tb;
   // Clock generation
   always #5 clk = ~clk;
 
-  // Simulation control and monitoring
-  int cycle_count = 0;
-  
   initial begin
     $dumpfile("pyramid_tb.vcd");
     $dumpvars(0, pyramid_tb);
-    
+
     // Initialize signals
     clk = 0;
     reset = 1;
     valid_i = 0;
     ready_o = 1; // Always ready to receive output
-    
+
     // Create a simple test pattern for input
     for (int i = 0; i < 8; i++) begin
       for (int j = 0; j < 8; j++) begin
         in[i][j] = 8'(i * 8 + j + 1); // Pattern: 1,2,3...64
       end
     end
-    
+
     $display("=== Pyramid Testbench ===");
     $display("Parameters: Blur0_N=%0d, Blur1_N=%0d, BlurUp_N=%0d", Blur0_N, Blur1_N, BlurUp_N);
     $display("Input pattern:");
@@ -79,7 +81,7 @@ module pyramid_tb;
     // Reset sequence
     repeat(3) @(posedge clk);
     reset = 0;
-    
+
     // Wait for ready_i
     while (!ready_i) begin
       @(posedge clk);
@@ -89,38 +91,38 @@ module pyramid_tb;
         $finish;
       end
     end
-    
+
     $display("Module ready after %0d cycles", cycle_count);
-    
+
     // Assert valid_i for one cycle
     valid_i = 1;
     @(posedge clk);
     cycle_count++;
     valid_i = 0;
-    
+
     $display("Input submitted at cycle %0d", cycle_count);
-    
+
     // Wait for output to be valid
     while (!valid_o) begin
       @(posedge clk);
       cycle_count++;
       if (cycle_count > TIMEOUT) begin
         $error("TIMEOUT: Module never produced output (valid_o) after %0d cycles", TIMEOUT);
-        $error("Final state: st=%0d, blur0_st=%0d, blur1_st=%0d, blur_up_st=%0d", 
+        $error("Final state: st=%0d, blur0_st=%0d, blur1_st=%0d, blur_up_st=%0d",
                st, blur0_st, blur1_st, blur_up_st);
         $finish;
       end
-      
+
       // Progress indicator every 100 cycles
       if (cycle_count % 100 == 0) begin
-        $display("Cycle %0d: st=%0d, blur0_st=%0d, blur1_st=%0d, blur_up_st=%0d", 
+        $display("Cycle %0d: st=%0d, blur0_st=%0d, blur1_st=%0d, blur_up_st=%0d",
                  cycle_count, st, blur0_st, blur1_st, blur_up_st);
       end
     end
-    
+
     $display("\n=== RESULTS ===");
     $display("Processing completed in %0d cycles", cycle_count);
-    
+
     $display("\nFinal output:");
     for (int i = 0; i < 8; i++) begin
       $write("  ");
@@ -129,11 +131,11 @@ module pyramid_tb;
       end
       $display("");
     end
-    
+
     $display("\nDebug signals:");
     $display("Final state: %0d", st);
     $display("Blur states: blur0=%0d, blur1=%0d, blur_up=%0d", blur0_st, blur1_st, blur_up_st);
-    
+
     $display("\nlevel0_stable (8x8):");
     for (int i = 0; i < 8; i++) begin
       $write("  ");
@@ -142,7 +144,7 @@ module pyramid_tb;
       end
       $display("");
     end
-    
+
     $display("\nlevel1_stable (4x4):");
     for (int i = 0; i < 4; i++) begin
       $write("  ");
@@ -151,7 +153,7 @@ module pyramid_tb;
       end
       $display("");
     end
-    
+
     $display("\nupsampled_stable (8x8):");
     for (int i = 0; i < 8; i++) begin
       $write("  ");
@@ -160,7 +162,7 @@ module pyramid_tb;
       end
       $display("");
     end
-    
+
     $display("\n=== TEST COMPLETED SUCCESSFULLY ===");
     $finish;
   end
