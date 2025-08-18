@@ -23,7 +23,7 @@ for dir in $folders; do
 
         # Extract implementation summary using synthrep
         summary=$(synthrep summary -d "$dir" | \
-          jq --arg name "$dir" '{ lut: .impl.summary.lut, registers: .impl.summary.registers, meet_timing: .meet_timing, frequency: .frequency, wns: .worst_slack } + {name: $name}')
+          jq --arg name "$dir" '{ lut: .impl.summary.lut, registers: .impl.summary.registers, meet_timing: .meet_timing, period: .period, wns: .worst_slack } + {name: $name}')
 
         if [ -n "$summary" ] && [ "$summary" != "null" ]; then
             # Add comma if not first entry
@@ -47,9 +47,8 @@ echo "]" >> "$temp_file"
 
 # Transform to result.json format
 jq '{
-    meet_timing: [.[] | {(.name): .meet_timing}] | add,
-    frequency: [.[] | {(.name): .frequency}] | add,
-    wns: [.[] | {(.name): .wns}] | add,
+    timing: [.[] | {(.name): { meets: .meet_timing, wns: .wns, period: .period}} ] | add,
+    possible_freq: [.[] | {(.name): (1000/(3-.wns))|round }] | add,
     luts: [.[] | {(.name): .lut}] | add,
     registers: [.[] | {(.name): .registers}] | add
 }' "$temp_file"
