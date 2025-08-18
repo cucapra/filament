@@ -26,6 +26,12 @@ extern "comb.sv" {
       out: ['G, 'L] OUT_WIDTH,
    ) where 'L > 'G, IN_WIDTH <= OUT_WIDTH, IN_WIDTH > 0, OUT_WIDTH > 0;
 
+   comp MultConst[WIDTH, N]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G, WIDTH > 0;
+
    comp And[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
       left: ['G, 'L] WIDTH,
       right: ['G, 'L] WIDTH,

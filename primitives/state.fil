@@ -77,12 +77,26 @@ comp Shift[W, D, ?N=1]<'G: 1>(
 }
 /* ANCHOR_END: shift */
 
-/// Shift 2D bundle of signals
-comp Shift2D[W, D0, D1, ?N=1]<'G:1>(
+comp Stretch[W, N, H]<'G:H>(
+  en: interface['G],
+  in[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G+1, 'G+H+1] W
+) where W > 0, N > 0, H > 0 {
+  for i in 0..N {
+    r := new Register[W]<'G, 'G+H+1>(in{i});
+    out{i} = r.out;
+  }
+}
+
+
+/// Shift 2D bundle of signals with a given reuse factor.
+// The module will instantiate D0*D1*(N/R) registers.
+comp Shift2D[W, D0, D1, ?N=1, ?R=1]<'G:1>(
   in[D0][D1]: ['G, 'G+1] W
 ) -> (
   out[D0][D1]: ['G+N, 'G+N+1] W
-) where W > 0, D0 > 0, D1 > 0, N > 0 {
+) where W > 0, D0 > 0, D1 > 0, N > 0, N % R == 0 {
   for i in 0..D0 {
     for j in 0..D1 {
       s := new Shift[W, N]<'G>(in{i}{j});

@@ -57,7 +57,7 @@ module PassThroughRegister #(
     .in(in),
     .out(t_out)
   );
-  
+
   assign out = write_en ? in : t_out;
 endmodule
 

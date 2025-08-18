@@ -31,6 +31,16 @@ module Sub #(
   assign out = left - right;
 endmodule
 
+module MultConst #(
+  parameter WIDTH = 32,
+  parameter bit[WIDTH-1:0] N = 1
+) (
+  input wire logic [WIDTH-1:0] in,
+  output wire logic [WIDTH-1:0] out
+);
+  assign out = N * in;
+endmodule
+
 module MultComb #(
   parameter IN_WIDTH = 32,
   parameter OUT_WIDTH = 32
@@ -264,7 +274,7 @@ module ArithShiftRight #(
   input wire logic signed [WIDTH-1:0] in,
   input wire logic [WIDTH-1:0] shift,
   output wire logic [WIDTH-1:0] out
-); 
+);
   assign out = in >>> shift;
 endmodule
 
