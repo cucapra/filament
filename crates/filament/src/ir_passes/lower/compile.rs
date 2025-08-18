@@ -87,17 +87,15 @@ impl Compile {
                     .idx_iter()
                     .filter_map(|idx| name_gen.interface_name(idx, comp))
                     .map(|name| {
+                        let mut attrs = calyx::Attributes::default();
+                        let attr =
+                            calyx::Attribute::Unknown("fil_event".into());
+                        attrs.insert(attr, 1);
                         calyx::PortDef::new(
                             name,
                             width_from_u64(1),
                             calyx::Direction::Input,
-                            // adds the `@fil_event` attribute to the port
-                            vec![(
-                                calyx::Attribute::Unknown("fil_event".into()),
-                                1,
-                            )]
-                            .try_into()
-                            .unwrap(),
+                            attrs,
                         )
                     }),
             )
@@ -134,11 +132,13 @@ impl Compile {
         if !comp.is_ext() {
             // add remaining interface ports if not found (found ports already removed above)
             for (attr, (name, width, dir)) in interface_ports {
+                let mut attrs = calyx::Attributes::default();
+                attrs.insert(attr.0, attr.1);
                 ports.push(calyx::PortDef::new(
                     calyx::Id::from(name.to_string()),
                     width_from_u64(*width),
                     dir.clone(),
-                    vec![*attr].try_into().unwrap(),
+                    attrs,
                 ));
             }
         }
@@ -285,7 +285,10 @@ impl Compile {
         let main =
             frontend::ast::ComponentDef::new("main", false, None, vec![]);
         ws.components.push(main);
-        let mut ctx = calyx::from_ast::ast_to_ir(ws)?;
+        let mut ctx = calyx::from_ast::ast_to_ir(
+            ws,
+            calyx::from_ast::AstConversionConfig::default(),
+        )?;
         ctx.components.retain(|c| c.name != "main");
         Ok(ctx)
     }

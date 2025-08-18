@@ -216,7 +216,9 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 }
 
 fn gen_verilog(mut ctx: calyx_ir::Context) -> Result<(), calyx_utils::Error> {
-    let pm = PassManager::default_passes()?;
+    let Ok(pm) = PassManager::default_passes() else {
+        unreachable!("Calyx failed")
+    };
     let backend_conf = calyx_ir::BackendConf {
         synthesis_mode: false,
         enable_verification: false,
@@ -224,12 +226,15 @@ fn gen_verilog(mut ctx: calyx_ir::Context) -> Result<(), calyx_utils::Error> {
         emit_primitive_extmodules: false,
     };
     ctx.bc = backend_conf;
-    pm.execute_plan(
+    let Ok(_) = pm.execute_plan(
         &mut ctx,
         &["all".to_string()],
         &["canonicalize".to_string()],
+        &[],
         false,
-    )?;
+    ) else {
+        unreachable!("Calyx failed")
+    };
     let backend = calyx_backend::VerilogBackend;
     backend.run(ctx, calyx_utils::OutputFile::Stdout)
 }

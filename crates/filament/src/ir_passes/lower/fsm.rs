@@ -100,13 +100,10 @@ impl FsmBind {
                         ),
                     ]
                 })
-                .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| {
-                    calyx::PortDef::new(
-                        pd.0,
-                        pd.1,
-                        pd.2.clone(),
-                        vec![*attr].try_into().unwrap(),
-                    )
+                .chain(INTERFACE_PORTS.iter().map(|((k, v), pd)| {
+                    let mut attrs = calyx::Attributes::default();
+                    attrs.insert(*k, *v);
+                    calyx::PortDef::new(pd.0, pd.1, pd.2.clone(), attrs)
                 }))
                 .chain([
                     calyx::PortDef::new(
@@ -208,12 +205,9 @@ impl FsmBind {
                 let ports: Vec<calyx::PortDef<u64>> = INTERFACE_PORTS
                     .iter()
                     .map(|(attr, pd)| {
-                        calyx::PortDef::new(
-                            pd.0,
-                            pd.1,
-                            pd.2.clone(),
-                            vec![*attr].try_into().unwrap(),
-                        )
+                        let mut attrs = calyx::Attributes::default();
+                        attrs.insert(attr.0, attr.1);
+                        calyx::PortDef::new(pd.0, pd.1, pd.2.clone(), attrs)
                     })
                     .chain([
                         calyx::PortDef::new(
@@ -337,12 +331,9 @@ impl FsmBind {
                     )
                 })
                 .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| {
-                    calyx::PortDef::new(
-                        pd.0,
-                        pd.1,
-                        pd.2.clone(),
-                        vec![*attr].try_into().unwrap(),
-                    )
+                    let mut attrs = calyx::Attributes::default();
+                    attrs.insert(attr.0, attr.1);
+                    calyx::PortDef::new(pd.0, pd.1, pd.2.clone(), attrs)
                 }))
                 .chain([
                     calyx::PortDef::new(

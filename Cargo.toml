@@ -43,11 +43,11 @@ fil-ir = { version = "0.1.0", path = "crates/ir" }
 fil-derive = { version = "0.1.0", path = "crates/derive" }
 fil-gen = { version = "0.1.0", path = "crates/gen" }
 
-calyx-ir = { version = "0.7.1" }
-calyx-frontend = { version = "0.7.1" }
-calyx-utils = { version = "0.7.1" }
-calyx-opt = { version = "0.7.1" }
-calyx-backend = { version = "0.7.1" }
+calyx-ir = { version = "0.7.1", git = "https://github.com/calyxir/calyx" }
+calyx-frontend = { version = "0.7.1", git = "https://github.com/calyxir/calyx" }
+calyx-utils = { version = "0.7.1", git = "https://github.com/calyxir/calyx" }
+calyx-opt = { version = "0.7.1", git = "https://github.com/calyxir/calyx" }
+calyx-backend = { version = "0.7.1", git = "https://github.com/calyxir/calyx" }
 
 [workspace.dependencies.env_logger]
 version = "0.11"
