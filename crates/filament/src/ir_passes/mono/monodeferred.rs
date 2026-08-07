@@ -45,7 +45,7 @@ impl MonoDeferred<'_, '_> {
 
     /// The [CompKey] associated with the underlying component being monomorphized.
     fn comp_key(&self) -> CompKey {
-        let binding = self.monosig.binding.inner();
+        let binding = self.monosig.resolver.inner();
         let conc_params = if self.underlying.is_ext() {
             vec![]
         } else {
@@ -73,7 +73,7 @@ impl MonoDeferred<'_, '_> {
             // Add events without monomorphizing their data. The data is updated after the body is monomorphized
             // because it can mention existential parameters.
             let new_idx = monosig.base.add(event.clone());
-            monosig.event_map.insert(idx.ul(), new_idx);
+            monosig.events.insert(idx.ul(), new_idx);
             pass.inst_info_mut(comp_k.clone())
                 .add_event(idx.ul(), new_idx);
         }
@@ -129,14 +129,19 @@ impl MonoDeferred<'_, '_> {
         for (idx, _) in
             self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
         {
-            let port_key = (None, idx.ul());
-            let base = self.monosig.port_map[&port_key];
+            let base = self.monosig.ports.expect(None, idx.ul());
             self.monosig
                 .port_data(&self.underlying, self.pass, idx.ul(), base);
         }
 
         // Handle event delays after monomorphization because delays might mention existential parameters.
-        for (old, &new) in self.monosig.event_map.clone().iter() {
+        let events: Vec<_> = self
+            .monosig
+            .events
+            .iter()
+            .map(|(&old, &new)| (old, new))
+            .collect();
+        for (old, new) in events {
             self.monosig
                 .event_delay(&self.underlying, self.pass, old, new);
         }
@@ -147,7 +152,7 @@ impl MonoDeferred<'_, '_> {
 
     /// Add to the parameter binding
     pub fn push_binding(&mut self, p: Underlying<ir::Param>, v: u64) {
-        self.monosig.binding.push(p, v);
+        self.monosig.resolver.push(p, v);
     }
 
     /// Monomorphize a component definition
@@ -173,7 +178,7 @@ impl MonoDeferred<'_, '_> {
                     self.underlying.display(param)
                 )
             };
-            self.monosig.binding.push(param, v);
+            self.monosig.resolver.push(param, v);
         }
 
         // Monomorphize the rest of the signature
@@ -241,16 +246,16 @@ impl MonoDeferred<'_, '_> {
 
         while i < bound {
             let index = index.ul();
-            let orig_l = self.monosig.binding.len();
-            self.monosig.binding.push(index, i);
+            let orig_l = self.monosig.resolver.len();
+            self.monosig.resolver.push(index, i);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.extend_cmds(cmd);
             }
             // Remove all the bindings added in this scope including the index
             self.monosig
-                .binding
-                .pop_n(self.monosig.binding.len() - orig_l);
+                .resolver
+                .pop_n(self.monosig.resolver.len() - orig_l);
             i += 1;
         }
     }
@@ -295,7 +300,7 @@ impl MonoDeferred<'_, '_> {
 
         if !params
             .into_iter()
-            .all(|idx| self.monosig.binding.get(&idx).is_some())
+            .all(|idx| self.monosig.resolver.get(&idx).is_some())
         {
             // Discards the assertion if it references parameters that can't be resolved (bundle parameters, etc)
             // TODO(edmund): Find a better solution to this - we should resolve bundle assertions when bundles are unrolled.
@@ -357,7 +362,7 @@ impl MonoDeferred<'_, '_> {
                         self.monosig.base.comp().display(e)
                     )
                 };
-                self.monosig.binding.push(p, v);
+                self.monosig.resolver.push(p, v);
                 None
             }
             ir::Command::Connect(con) => Some(self.connect(con).into()),

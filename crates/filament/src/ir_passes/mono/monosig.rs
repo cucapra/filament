@@ -1,19 +1,11 @@
 use super::{
-    Base, BaseComp, CompKey, IntoBase, IntoUdl, Monomorphize, Underlying,
-    UnderlyingComp,
+    Base, BaseComp, CompKey, EventMapping, InstanceMapping, IntoBase, IntoUdl,
+    InvokeMapping, Monomorphize, ParamMapping, ParamResolver, PortMapping,
+    Underlying, UnderlyingComp,
 };
-use fil_ir::{
-    self as ir, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
-    SparseInfoMap,
-};
+use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
-
-/// The port key is either a invocation port or a local port
-type PortKey = (Option<Base<ir::Invoke>>, Underlying<ir::Port>);
-
-type DenseMap<T> = DenseIndexInfo<T, Base<T>, Underlying<T>>;
-type SparseMap<T> = SparseInfoMap<T, Base<T>, Underlying<T>>;
 
 /// Tracks all the information generated while monomorphizing a component as well the component itself.
 /// The maps are used to transform table data like parameters, events, and ports
@@ -23,23 +15,22 @@ pub struct MonoSig {
     pub base: BaseComp,
     /// The underlying component's idx
     pub underlying_idx: Underlying<ir::Component>,
-    /// Mapping from parameters in the underlying component to their constant bindings.
-    pub binding: ir::Bind<Underlying<ir::Param>, u64>,
+    /// Enhanced parameter resolver with better debugging
+    pub resolver: ParamResolver,
 
-    // Keep track of things that have benen monomorphized already
+    // Simplified, type-safe mappings with better error messages
     /// Events
-    pub event_map: DenseMap<ir::Event>,
-    /// Params - underlying param -> new Param. Kept in a sparse map because we're going to remove most parameters during monomorphization.
-    pub param_map: SparseMap<ir::Param>,
-    /// Ports - (base inv, underlying port) -> base port
-    pub port_map: HashMap<PortKey, Base<ir::Port>>,
-    /// Bundle params - new port to new param
+    pub events: EventMapping,
+    /// Params - underlying param -> new Param
+    pub params: ParamMapping,
+    /// Instances
+    pub instances: InstanceMapping,
+    /// Invokes
+    pub invokes: InvokeMapping,
+    /// Ports - specialized mapping for complex keys
+    pub ports: PortMapping,
+    /// Bundle params - new port to new param (kept as-is due to complexity)
     bundle_param_map: HashMap<Base<ir::Port>, Vec<Base<ir::Param>>>,
-
-    /// Map from underlying invokes to base invokes
-    invoke_map: DenseMap<ir::Invoke>,
-    /// Map from underlying instances to base instances
-    instance_map: DenseMap<ir::Instance>,
 }
 
 impl MonoSig {
@@ -49,7 +40,7 @@ impl MonoSig {
         idx: Underlying<ir::Component>,
         params: Vec<u64>,
     ) -> Self {
-        let binding = ir::Bind::new(
+        let resolver = ParamResolver::with_bindings(
             underlying
                 .sig_params()
                 .map(|p| p.ul())
@@ -61,19 +52,19 @@ impl MonoSig {
         Self {
             base: BaseComp::new(comp),
             underlying_idx: idx,
-            binding,
-            port_map: HashMap::new(),
+            resolver,
+            ports: PortMapping::new(),
             bundle_param_map: HashMap::new(),
-            param_map: SparseInfoMap::default(),
-            event_map: DenseMap::default(),
-            invoke_map: DenseMap::default(),
-            instance_map: DenseMap::default(),
+            params: ParamMapping::new("params"),
+            events: EventMapping::new("events"),
+            invokes: InvokeMapping::new("invokes"),
+            instances: InstanceMapping::new("instances"),
         }
     }
 
     /// String representation for the binding for debug purposes
     pub fn binding_rep(&self, ul: &UnderlyingComp<'_>) -> String {
-        self.binding
+        self.resolver
             .iter()
             .map(|(p, e)| format!("{}: {}", ul.display(*p), e))
             .join(", ")
@@ -92,7 +83,7 @@ impl MonoSig {
                 // inv is only meaningful in the underlying component
                 let inv = inv.ul();
                 let base = self.foreign_port(base, underlying, pass, inv);
-                let base_inv = self.invoke_map.get(inv).get();
+                let base_inv = self.invokes.get(inv).get();
                 ir::PortOwner::Inv {
                     inv: base_inv,
                     dir: dir.clone(),
@@ -121,7 +112,11 @@ impl MonoSig {
         };
 
         let Some(&comp) = pass.processed.get(&comp_k) else {
-            unreachable!("component {comp_k} should have been monomorphized")
+            panic!(
+                "component {} should have been monomorphized.\nProcessed components: {}",
+                comp_k,
+                pass.processed.len()
+            )
         };
 
         (comp_k, comp)
@@ -140,10 +135,11 @@ impl MonoSig {
         // now need to find the mapping from old portidx and the old instance to new port
         let new_port =
             pass.inst_info(&comp_k).get_port(key).unwrap_or_else(|| {
-                unreachable!(
-                    "port {:?}.{} is missing from global map",
+                panic!(
+                    "port {:?}.{} is missing from global map for component {}.\nContext: foreign_port resolution",
                     inst_comp.idx(),
-                    pass.old.get(inst_comp.idx()).display(key.idx())
+                    pass.old.get(inst_comp.idx()).display(key.idx()),
+                    comp_k
                 )
             });
 
@@ -221,11 +217,11 @@ impl MonoSig {
         ul: &UnderlyingComp,
         p_idx: Underlying<ir::Param>,
     ) -> Base<ir::Param> {
-        if let Some(&idx) = self.param_map.find(p_idx) {
+        if let Some(idx) = self.params.find(p_idx) {
             idx
         } else {
             let p_rep = ul.display(p_idx);
-            // This param is a in a use site and should therefore have been found.
+            // This param is in a use site and should therefore have been found.
             let msg = match ul.get(p_idx).owner {
                 ir::ParamOwner::Loop => "loop-bound parameter".to_string(),
                 ir::ParamOwner::Let { .. } => "let-bound parameter".to_string(),
@@ -238,14 +234,14 @@ impl MonoSig {
                     ul.display(inst.ul())
                 ),
                 ir::ParamOwner::Exists { .. } => {
-                    unreachable!(
-                        "existential parameter `{}' occurred in a use location",
+                    panic!(
+                        "existential parameter `{}' occurred in a use location.\nContext: param_use",
                         p_rep
                     )
                 }
             };
-            unreachable!(
-                "{} `{}' should have been resolved in the binding but the binding was: [{}]",
+            panic!(
+                "{} `{}' should have been resolved in the binding but the binding was: [{}].\nContext: param_use resolution",
                 msg,
                 p_rep,
                 self.binding_rep(ul),
@@ -347,8 +343,8 @@ impl MonoSig {
             ir::Expr::Param(p) => {
                 // If this is a parameter in the underlying component that is bound,
                 // return its binding
-                if let Some(n) = self.binding.get(&p.ul()) {
-                    let new_idx = self.base.num(*n);
+                if let Some(n) = self.resolver.get(&p.ul()) {
+                    let new_idx = self.base.num(n);
                     return new_idx;
                 } else {
                     let p = self.param_use(underlying, p.ul()).get();
@@ -473,16 +469,12 @@ impl MonoSig {
                     ports,
                     interface_ports: interface_ports
                         .iter()
-                        .map(|(ev, id)| {
-                            (self.event_map.get(ev.ul()).get(), *id)
-                        })
+                        .map(|(ev, id)| (self.events.get(ev.ul()).get(), *id))
                         .collect(),
                     params,
                     events: events
                         .iter()
-                        .map(|(ev, id)| {
-                            (self.event_map.get(ev.ul()).get(), *id)
-                        })
+                        .map(|(ev, id)| (self.events.get(ev.ul()).get(), *id))
                         .collect(),
                     // Things do not need to be generated after monomorphize
                     gen_tool: None,
@@ -497,13 +489,13 @@ impl MonoSig {
         pass: &mut Monomorphize,
         event: Underlying<ir::Event>,
     ) -> Base<ir::Event> {
-        let binding = self.binding.inner();
+        let binding = self.resolver.inner();
         let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
 
-        let new_event = self.event_map.get(event);
+        let new_event = self.events.get(event);
         let ck: CompKey = (self.underlying_idx, conc_params).into();
-        pass.inst_info_mut(ck).add_event(event, *new_event);
-        *new_event
+        pass.inst_info_mut(ck).add_event(event, new_event);
+        new_event
     }
 
     /// Takes a underlying-owned params that are known to be bundle-owned and a port index owned by self.base,
@@ -519,7 +511,10 @@ impl MonoSig {
         let mono_owner = ir::ParamOwner::Bundle(port.get());
 
         if self.bundle_param_map.contains_key(&port) {
-            unreachable!("port {} already has bundle params", port.get());
+            panic!(
+                "port {} already has bundle params.\nContext: bundle_params creation",
+                port.get()
+            );
         };
 
         let mono_params = params
@@ -536,7 +531,7 @@ impl MonoSig {
                         .get(),
                 };
                 let new_idx = self.base.add(mono_param);
-                self.param_map.push(*old_pidx, new_idx);
+                self.params.insert(*old_pidx, new_idx);
                 new_idx
             })
             .collect_vec();
@@ -574,10 +569,10 @@ impl MonoSig {
 
         // Update the mapping from underlying invokes to base invokes
         // just unwrap because we maintain that inv will always be present in the mapping
-        self.invoke_map.insert(inv, mono_inv_idx);
+        self.invokes.insert(inv, mono_inv_idx);
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
-        let base_inst = *self.instance_map.get(inst.ul());
+        let base_inst = self.instances.get(inst.ul());
 
         // Ports
         let mono_ports = ports
@@ -711,11 +706,11 @@ impl MonoSig {
         let mono_comp = pass.monomorphize(ck.clone());
 
         // Binding for parameters defined by this instance
-        self.binding.extend(params.iter().map(|p| {
+        self.resolver.extend(params.iter().map(|p| {
             let p = p.ul();
             let ir::ParamOwner::Instance { base, .. } = underlying.get(p).owner
             else {
-                unreachable!("param should be owned by instance")
+                panic!("param should be owned by instance.\nContext: inst_def parameter binding")
             };
             (
                 p,
@@ -747,7 +742,7 @@ impl MonoSig {
         };
 
         let new_idx = self.base.add(new_inst);
-        self.instance_map.insert(inst, new_idx);
+        self.instances.insert(inst, new_idx);
 
         new_idx
     }
@@ -761,15 +756,16 @@ impl MonoSig {
         let inv = match &underlying.get(port).owner {
             ir::PortOwner::Sig { .. } | ir::PortOwner::Local => None,
             ir::PortOwner::Inv { inv, .. } => {
-                let base_inv = *self.invoke_map.get(inv.ul());
+                let base_inv = self.invokes.get(inv.ul());
                 Some(base_inv)
             }
         };
-        let port_map_k = (inv, port.idx().ul());
-        if let Some(idx) = self.port_map.get(&port_map_k) {
-            *idx
+        if let Some(idx) = self.ports.get(inv, port) {
+            idx
         } else {
-            unreachable!("port_use called for undefined port");
+            panic!(
+                "port_use called for undefined port.\nContext: port_use resolution"
+            );
         }
     }
 
@@ -803,12 +799,10 @@ impl MonoSig {
         let inv = match owner {
             ir::PortOwner::Sig { .. } | ir::PortOwner::Local => None,
             ir::PortOwner::Inv { inv, .. } => {
-                let base_inv = *self.invoke_map.get(inv.ul());
+                let base_inv = self.invokes.get(inv.ul());
                 Some(base_inv)
             }
         };
-
-        let port_map_k = (inv, port);
         let info = info.ul();
         let info = self.info(underlying, pass, info);
 
@@ -824,7 +818,7 @@ impl MonoSig {
 
         // Overwrite the value in the port map if any. This is okay because this
         // method can be called on local ports defined in iterative scopes.
-        self.port_map.insert(port_map_k, new_port);
+        self.ports.insert(inv, port, new_port);
 
         new_port
     }
