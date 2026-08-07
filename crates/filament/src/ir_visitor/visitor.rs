@@ -1,5 +1,7 @@
 use crate::cmdline;
 use fil_ir::{self as ir, Ctx, MutCtx};
+use fil_utils::{self as utils, AttrCtx, GPosIdx};
+
 
 #[must_use]
 #[derive(PartialEq, Eq)]
@@ -114,6 +116,12 @@ where
 {
     /// The user visible name for the pass
     fn name() -> &'static str;
+
+    /// Flag associated with this component
+    /// Used to track whether a component has been transformed by this pass
+    fn flag() -> Option<utils::CompBool> {
+        None
+    }
 
     #[must_use]
     /// Executed after the visitor has visited all the components.
@@ -306,6 +314,10 @@ where
             data.comp.cmds = pre_cmds;
         }
         data.comp.cmds.extend(cmds);
+
+        if let Some(flag) = Self::flag() {
+            data.comp.attrs.set(flag, true, GPosIdx::UNKNOWN);
+        }
 
         self.end(&mut data);
     }

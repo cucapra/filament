@@ -9,6 +9,12 @@ attr_set! {
             /// Use a counter based FSM design
             CounterFSM: "counter_fsm",
         };
+        priv {
+            /// This component is monomorphic
+            Monomorphic,
+            /// Bundles have been eliminated
+            BundleLess,
+        };
     };
     numeric {};
     float {};
