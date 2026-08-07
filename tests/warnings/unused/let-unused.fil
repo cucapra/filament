@@ -1,0 +1,8 @@
+import "primitives/core.fil";
+
+comp main<'G:1>() -> () with {
+  let UNUSED_LET = 42;
+  let USED_LET = 10;
+} {
+  const_val := new Const[32, USED_LET]<'G>();
+}

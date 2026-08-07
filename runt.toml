@@ -5,7 +5,7 @@ ver = "0.4.1"
 name = "check-z3"
 paths = ["tests/check/*.fil", "primitives/*.fil"]
 cmd = """
-./target/debug/filament {} --check --solver z3
+./target/debug/filament {} --check --no-warn-unused --solver z3
 """
 expect_dir = "tests/check/"
 
@@ -13,15 +13,22 @@ expect_dir = "tests/check/"
 name = "check-cvc5"
 paths = ["tests/check/*.fil", "primitives/*.fil"]
 cmd = """
-./target/debug/filament {} --check --solver cvc5
+./target/debug/filament {} --check --no-warn-unused --solver cvc5
 """
 expect_dir = "tests/check/"
+
+[[tests]]
+name = "warnings"
+paths = ["tests/warnings/**/*.fil"]
+cmd = """
+./target/debug/filament --warnings-as-errors {}
+"""
 
 [[tests]]
 name = "errors"
 paths = ["tests/errors/**/*.fil"]
 cmd = """
-./target/debug/filament {}
+./target/debug/filament --no-warn-unused {}
 """
 
 [[tests]]

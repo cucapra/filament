@@ -12,7 +12,7 @@ pub use attr::{
     AttrCtx, AttrStore, Attributes, CompAttrs, CompBool, CompNum, PortAttrs,
     PortBool, PortNum,
 };
-pub use errors::{Error, FilamentResult};
+pub use errors::{Error, FilamentResult, Severity};
 pub use gsym::GSym;
 pub use id::Id;
 pub use math::{all_indices, flat_idx, nd_idx};

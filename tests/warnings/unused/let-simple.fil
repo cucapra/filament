@@ -1,0 +1,4 @@
+comp main<'G:1>() -> () with {
+  let UNUSED_PARAM = 42;
+} {
+}

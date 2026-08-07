@@ -1,0 +1,9 @@
+import "primitives/comb.fil";
+
+comp main<'G:1>(
+  in1: ['G, 'G+1] 32,
+  in2: ['G, 'G+1] 32
+) -> () {
+  adder := new Add[32]<'G>(in1, in2);
+  // adder.out is never used - this is an unused invocation
+}

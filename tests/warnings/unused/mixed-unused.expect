@@ -1,0 +1,23 @@
+---CODE---
+1
+---STDERR---
+error: unused instance: instance is created but never invoked
+   ┌─ tests/warnings/unused/mixed-unused.fil:15:3
+   │
+15 │   helper := new Helper;
+   │   ^^^^^^ instance defined here
+
+error: unused invocation: output ports on invocation never used
+   ┌─ tests/warnings/unused/mixed-unused.fil:18:3
+   │
+18 │   adder := new Add[USED_PARAM]<'G>(in1, in2);
+   │   ^^^^^ invocation defined here
+
+error: unused parameter: parameter is defined but never used
+   ┌─ tests/warnings/unused/mixed-unused.fil:11:7
+   │
+11 │   let UNUSED_PARAM = 100;
+   │       ^^^^^^^^^^^^ parameter defined here
+
+Compilation failed with 3 errors.
+Run with --show-models to generate assignments for failing constraints.

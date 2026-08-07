@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: unused parameter: parameter is defined but never used
+  ┌─ tests/warnings/unused/let-simple.fil:2:7
+  │
+2 │   let UNUSED_PARAM = 42;
+  │       ^^^^^^^^^^^^ parameter defined here
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
