@@ -71,37 +71,6 @@ impl MonoSig {
         }
     }
 
-    /// String representation for the binding for debug purposes
-    pub fn binding_rep(&self, ul: &UnderlyingComp<'_>) -> String {
-        self.binding
-            .iter()
-            .map(|(p, e)| format!("{}: {}", ul.display(*p), e))
-            .join(", ")
-    }
-
-    /// Given an underlying PortOwner, returns the corresponding base PortOwner
-    fn find_new_portowner(
-        &mut self,
-        underlying: &UnderlyingComp,
-        pass: &mut Monomorphize,
-        owner: &ir::PortOwner,
-    ) -> ir::PortOwner {
-        match owner {
-            ir::PortOwner::Sig { .. } | ir::PortOwner::Local => owner.clone(),
-            ir::PortOwner::Inv { inv, dir, base } => {
-                // inv is only meaningful in the underlying component
-                let inv = inv.ul();
-                let base = self.foreign_port(base, underlying, pass, inv);
-                let base_inv = self.invoke_map.get(inv).get();
-                ir::PortOwner::Inv {
-                    inv: base_inv,
-                    dir: dir.clone(),
-                    base,
-                }
-            }
-        }
-    }
-
     /// Get the component associated with a foreign port in the new context. We
     /// need to look up the instance that this port is associated with because
     /// each set of parameters will generate a new component after mono runs.
@@ -248,7 +217,10 @@ impl MonoSig {
                 "{} `{}' should have been resolved in the binding but the binding was: [{}]",
                 msg,
                 p_rep,
-                self.binding_rep(ul),
+                self.binding
+                    .iter()
+                    .map(|(p, e)| format!("{}: {}", ul.display(*p), e))
+                    .join(", ")
             )
         }
     }
@@ -846,7 +818,20 @@ impl MonoSig {
         } = underlying.get(port);
 
         // Find the new port owner
-        let mono_owner = self.find_new_portowner(underlying, pass, owner);
+        let mono_owner = match owner {
+            ir::PortOwner::Sig { .. } | ir::PortOwner::Local => owner.clone(),
+            ir::PortOwner::Inv { inv, dir, base } => {
+                // inv is only meaningful in the underlying component
+                let inv = inv.ul();
+                let base = self.foreign_port(base, underlying, pass, inv);
+                let base_inv = self.invoke_map.get(inv).get();
+                ir::PortOwner::Inv {
+                    inv: base_inv,
+                    dir: dir.clone(),
+                    base,
+                }
+            }
+        };
 
         let ir::Liveness { idxs, lens, range } = live;
 
